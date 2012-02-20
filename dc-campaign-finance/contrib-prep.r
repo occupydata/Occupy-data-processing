@@ -1,5 +1,5 @@
 
-work.dir<-""
+work.dir<-"/Users/travismcarthur/Desktop/Occupy/DC MOP UP/Ballot initiative/R processing/"
 # Put your working directory here
 
 download.file(
