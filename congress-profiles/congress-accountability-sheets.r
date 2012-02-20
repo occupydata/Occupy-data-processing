@@ -8,7 +8,7 @@ install.packages("reshape")
 library("XML")
 library("reshape")
 
-work.dir<-"/Users/travismcarthur/Desktop/Occupy/"
+work.dir<-""
 # Put your working directory here
 
 
