@@ -1,4 +1,6 @@
 # You will need an API key from both opensecrets.org and nytimes.com
+# You will need the curl library installed on your computer (Macs come with curl): 
+# http://curl.haxx.se/download.html
 
 install.packages("XML")
 install.packages("reshape")
@@ -6,7 +8,7 @@ install.packages("reshape")
 library("XML")
 library("reshape")
 
-work.dir<-""
+work.dir<-"/Users/travismcarthur/Desktop/Occupy/"
 # Put your working directory here
 
 
@@ -21,11 +23,15 @@ for ( i in 1:nrow(ca.df)) {
 
 ph.file<-list.files(path = paste(work.dir,  "Cong photos/", sep="") )
 
+
+download.file(url="https://github.com/occupydc/Occupy-data-processing/raw/master/congress-profiles/missing-photo.jpeg", 
+  destfile=paste(work.dir, "Cong photos/missing-photo.jpeg", sep=""), method="curl")
+
 for ( i in ca.df$GT.ID[!ca.df$GT.ID %in% gsub("[.]jpeg", "", ph.file) ] ) {
 
-  file.copy(from="", 
+  file.copy(from="http://github.com/occupydc/Occupy-data-processing/raw/master/congress-profiles/missing-photo.jpeg", 
     to=paste(work.dir, "Cong photos/", i, ".jpeg", sep="") )
-# Need to fix this
+
 }
 
 
