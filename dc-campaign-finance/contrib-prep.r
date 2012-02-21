@@ -1,5 +1,5 @@
 
-work.dir<-"/Users/travismcarthur/Desktop/Occupy/DC MOP UP/Ballot initiative/R processing/"
+work.dir<-""
 # Put your working directory here
 
 download.file(
@@ -23,6 +23,20 @@ for ( targ.file in files.to.stack[-1] ) {
 
 }
 
+contribs.to.geocode.df<-contribs.df[!duplicated(contribs.df[, c("Address", "city", "state", "Zip")]), 
+  c("Address", "city", "state", "Zip")]
+
+contribs.to.geocode.df$geocode.id<-1:nrow(contribs.to.geocode.df)
+
+contribs.df<-merge(contribs.df, contribs.to.geocode.df)
+
+contribs.to.geocode.df
+
+geocode.output.ls<-vector("list", length=nrow(contribs.to.geocode.df))
 
 
+for ( i in 1:nrow(contribs.df)) {
+
+  
+}
 
