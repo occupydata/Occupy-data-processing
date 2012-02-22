@@ -21,9 +21,9 @@ split.csv <- function(input.file, output.dir, row.num,  output.stem="output") {
 }
 
 # EXAMPLE BELOW
-split.csv("YOUR/INPUT/PATH/AND/FILE/NAME/HERE.csv", "YOUR/INPUT/DIRECTORY/HERE/", 200)
+split.csv("/YOUR/INPUT/PATH/AND/FILE/NAME/HERE.csv", "YOUR/INPUT/DIRECTORY/HERE/", 200)
 
-duplicate.row <- function (x, num.copies, output.file, which.rows="all", which.columns="all") {
+duplicate.row <- function(x, num.copies, output.file, which.rows="all", which.columns="all") {
 
   if (which.rows=="all") {which.rows<-1:nrow(x)}
   if (which.columns=="all") {which.columns<-TRUE}
@@ -47,9 +47,9 @@ NULL
 # which.rows SHOULD BE NUMERICAL VECTOR OR DEFAULT OF "all"
 # EXAMPLE BELOW
 
-test.df<-read.csv("YOUR/INPUT/PATH/AND/FILE/NAME/HERE.csv", stringsAsFactors=FALSE)
+test.df<-read.csv("/YOUR/INPUT/PATH/AND/FILE/NAME/HERE.csv", stringsAsFactors=FALSE)
 
 test.df<-test.df[1:10, ]
 
-duplicate.row(test.df, test.df$geoID, "YOUR/OUTPUT/PATH/AND/FILE/NAME/HERE.csv", which.columns=c("title", "latitude", "longitude"))
+duplicate.row(test.df, test.df$geoID, "/YOUR/OUTPUT/PATH/AND/FILE/NAME/HERE.csv", which.columns=c("title", "latitude", "longitude"))
 
