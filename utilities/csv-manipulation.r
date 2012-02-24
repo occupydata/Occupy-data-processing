@@ -21,7 +21,11 @@ split.csv <- function(input.file, output.dir, row.num,  output.stem="output") {
 }
 
 # EXAMPLE BELOW
+
 split.csv("/YOUR/INPUT/PATH/AND/FILE/NAME/HERE.csv", "/YOUR/INPUT/DIRECTORY/HERE/", 200)
+
+
+
 
 duplicate.row <- function(x, num.copies, output.file, which.rows="all", which.columns="all") {
 

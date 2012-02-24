@@ -45,7 +45,7 @@ contribs.to.geocode.df$api.url<-paste(
   URLencode.vec(contribs.to.geocode.df$state), 
   "&zip=",
   URLencode.vec(contribs.to.geocode.df$Zip),
-  							"&apikey=YOUR_API_KEY_HERE&format=csv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
+  "&apikey=YOUR_API_KEY_HERE&format=csv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
   sep=""
 )
 
