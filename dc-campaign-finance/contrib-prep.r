@@ -87,10 +87,11 @@ for ( i in 24300:nrow(contribs.to.geocode.df)) {
 	if (credits<=10) {
 		
 		from <- sprintf("<sendmailR@%s>", Sys.info()[4])
-		to <- "<travis.d.mcarthur@gmail.com>"
+		to <- ""
+		# email address above
 		subject <- "ADD MORE WEBGIS CREDITS"
 		
-		junk.v<-tryCatch( sendmail(from, to, subject, paste("Hi Travis, \n\nYou need to add more credits to WebGIS"),
+		junk.v<-tryCatch( sendmail(from, to, subject, paste("Hi, \n\nYou need to add more credits to WebGIS"),
 															 control=list(smtpServer="ASPMX.L.GOOGLE.COM")), error = function(e) { "Error" })
 		
 		while (credits<=10) {
@@ -107,7 +108,6 @@ for ( i in 24300:nrow(contribs.to.geocode.df)) {
 	
 }
 
-load("/Users/travismcarthur/Desktop/Occupy/DC MOP UP/Ballot initiative/Geocode output list.Rdata")
 
 # geocode.output.ls<-geocode.output.ls[1:31441]
 successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
@@ -212,8 +212,6 @@ geocode.output.leftover.ls<-geocode.output.ls[successful.geocode.v]
 table(sapply(geocode.output.leftover.ls, FUN=ncol))
 
 
-write.csv(contribs.geocoded.df[1:1000, ], "/Users/travismcarthur/Desktop/Occupy/DC MOP UP/Ballot initiative/R processing/test output.csv")
-  
   
 # Examples for WebGIS:
   https://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=PO%20Box%20123&city=Beverly%20Hills
