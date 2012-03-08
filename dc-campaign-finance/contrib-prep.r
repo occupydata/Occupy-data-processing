@@ -37,24 +37,24 @@ URLencode.vec <- Vectorize(URLencode)
 # http://r.789695.n4.nabble.com/RFE-vectorize-URLdecode-td901435.html
 
 contribs.to.geocode.df$api.url<-paste(
-	"http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=",
-	URLencode.vec(contribs.to.geocode.df$Address, reserved = TRUE),
-	"&city=",
-	URLencode.vec(contribs.to.geocode.df$city, reserved = TRUE),
-	"&state=",
-	URLencode.vec(contribs.to.geocode.df$state, reserved = TRUE),
-	"&zip=",
-	URLencode.vec(contribs.to.geocode.df$Zip, reserved = TRUE),
-	"&apikey=YOUR_API_KEY_HERE&format=tsv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
-	sep=""
-	)
+  "http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=",
+  URLencode.vec(contribs.to.geocode.df$Address, reserved = TRUE),
+  "&city=",
+  URLencode.vec(contribs.to.geocode.df$city, reserved = TRUE),
+  "&state=",
+  URLencode.vec(contribs.to.geocode.df$state, reserved = TRUE),
+  "&zip=",
+  URLencode.vec(contribs.to.geocode.df$Zip, reserved = TRUE),
+  "&apikey=YOUR_API_KEY_HERE&format=tsv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
+  sep=""
+  )
 
 
 # observs<-sample(1:nrow(contribs.to.geocode.df), 2000)
 # observs[i]
 
 check.integer <- function(N){
-	!length(grep("[^[:digit:]]", format(N, scientific = FALSE)))
+  !length(grep("[^[:digit:]]", format(N, scientific = FALSE)))
 }
 
 library(sendmailR)
@@ -63,64 +63,61 @@ library(stringr)
 credits<-2000
 
 for ( i in 24300:nrow(contribs.to.geocode.df)) {
-	
-	geocode.output.ls[[i]]<-
-		tryCatch(read.delim(contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE),
-						 error = function(e) { "Error retrieving geocode" })
-	
-	cat(date(), "\n")
-	flush.console()
-	
-	credits <- credits - 1
-	
-	if (check.integer(i/50)) {
-		
-		credits<- tryCatch(
-			read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
-			error = function(e) { credits })
-		
-		junk.v<-tryCatch(save(geocode.output.ls, file=paste(work.dir, "Geocode output list.Rdata")),
-										 error = function(e) { "Error" })
-		
-	}
-	
-	if (credits<=10) {
-		
-		from <- sprintf("<sendmailR@%s>", Sys.info()[4])
-		to <- ""
-		# email address above
-		subject <- "ADD MORE WEBGIS CREDITS"
-		
-		junk.v<-tryCatch( sendmail(from, to, subject, paste("Hi, \n\nYou need to add more credits to WebGIS"),
-															 control=list(smtpServer="ASPMX.L.GOOGLE.COM")), error = function(e) { "Error" })
-		
-		while (credits<=10) {
-			
-			Sys.sleep(10)
-			
-			credits<- tryCatch(
-				read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
-				error = function(e) { credits })
-			
-		}
-		
-	}
-	
+  
+  geocode.output.ls[[i]]<-
+    tryCatch(read.delim(contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE),
+             error = function(e) { "Error retrieving geocode" })
+  
+  cat(date(), "\n")
+  flush.console()
+  
+  credits <- credits - 1
+  
+  if (check.integer(i/50)) {
+    
+    credits<- tryCatch(
+      read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
+      error = function(e) { credits })
+    
+    junk.v<-tryCatch(save(geocode.output.ls, file=paste(work.dir, "Geocode output list.Rdata")),
+                     error = function(e) { "Error" })
+    
+  }
+  
+  if (credits<=10) {
+    
+    from <- sprintf("<sendmailR@%s>", Sys.info()[4])
+    to <- ""
+    # email address above
+    subject <- "ADD MORE WEBGIS CREDITS"
+    
+    junk.v<-tryCatch( sendmail(from, to, subject, paste("Hi, \n\nYou need to add more credits to WebGIS"),
+                               control=list(smtpServer="ASPMX.L.GOOGLE.COM")), error = function(e) { "Error" })
+    
+    while (credits<=10) {
+      
+      Sys.sleep(10)
+      
+      credits<- tryCatch(
+        read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
+        error = function(e) { credits })
+      
+    }
+    
+  }
+  
 }
 
 
 # geocode.output.ls<-geocode.output.ls[1:31441]
 successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
-	if(is.data.frame(x)) {
-	  ret<-ncol(x)==122 
-	} else {
-	  ret<-FALSE
-	} 
-	ret})
+  if(is.data.frame(x)) {
+    ret<-ncol(x)==122 
+  } else {
+    ret<-FALSE
+  } 
+  ret})
 
-# <need to add second attempt code in here >
-
-# this is inefficient geocode.output.df<-do.call( rbind, geocode.output.ls[successful.geocode.v])
 
 geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=122, byrow=TRUE)
 geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
@@ -134,32 +131,46 @@ geocode.output.df<-geocode.output.df[,
   ]
 
 
+contribs.df$DUPS<-duplicated(contribs.df[, c("Address", "city", "state", "Zip")])
+
+k<-1
+
+for ( i in 1:nrow(contribs.df)) {
+  if (contribs.df$DUPS[i]) {
+    contribs.df$geocode.id[i]<-k
+  } else {
+    k<-k+1
+    contribs.df$geocode.id[i]<-k
+  }
+    
+}
+
+#### THIS IS NECESSARY SINCE SOMEHOW THE GEOCODES WERE SCRAMBLED. MUST FIX IN FINAL
+#### VERSION OF CODE ABOVE
+
+#contribs.df$geocode.id<-contribs.df$geocode.id-1
+
 contribs.geocoded.df<-merge(contribs.df, geocode.output.df)
 
 #contribs.geocoded.df<-geocode.output.df
 
-contribs.geocoded.df$geocode.success<-contribs.geocoded.df$Feature.Matching.Result Type=="Success"
-contribs.geocoded.df$geocode.exact<-geocode.output.df$Match.Type=="Exact"
+contribs.geocoded.df$geocode.success<-contribs.geocoded.df$Feature.Matching.Result.Type=="Success"
+contribs.geocoded.df$geocode.exact<-contribs.geocoded.df$Match.Type=="Exact"
 
-contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="USPSZipPlus4", c("FArea", "FAreaType")]
+contribs.geocoded.df$street.precise<-contribs.geocoded.df$Matching.Geography.Type %in% 
+  c("Parcel", "StreetSegment", "USPSZipPlus4")
 
-head(
-contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="CountySubRegion", c("FArea", "FAreaType")]
-)
-
-Take these:
-Parcel StreetSegment    USPSZipPlus4
 
 contribs.geocoded.df$PSuiteNumber.cleaned<-gsub("[^0-9]", "", contribs.geocoded.df$PSuiteNumber)
 
 address.cols<- c("PNumber", "PNumberFractional", "FPreDirectional", "FPreQualifier", "FName", "FPostQualifier", "FPostQualifier", "FSuffix", "FPostDirectional", "PSuiteNumber.cleaned")
 
 for (i in address.cols) {
-	contribs.geocoded.df[is.na(contribs.geocoded.df[, i]), i]<-"empty.remove.indicator"
+  contribs.geocoded.df[is.na(contribs.geocoded.df[, i]), i]<-"empty.remove.indicator"
 }
 
 contribs.geocoded.df$address.clean<-paste(
-	contribs.geocoded.df[, address.cols[1]],
+  contribs.geocoded.df[, address.cols[1]],
   contribs.geocoded.df[, address.cols[2]],
   contribs.geocoded.df[, address.cols[3]],
   contribs.geocoded.df[, address.cols[4]],
@@ -168,9 +179,9 @@ contribs.geocoded.df$address.clean<-paste(
   contribs.geocoded.df[, address.cols[7]],
   contribs.geocoded.df[, address.cols[8]],
   contribs.geocoded.df[, address.cols[9]],
-	"No.",
+  "No.",
   contribs.geocoded.df[, address.cols[10]],
-	sep=" "
+  sep=" "
 )
 
 contribs.geocoded.df$address.clean<-gsub("No[.] empty[.]remove[.]indicator", "", contribs.geocoded.df$address.clean )
@@ -183,48 +194,64 @@ contribs.geocoded.df$address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$a
 
 contribs.geocoded.df$address.clean<-gsub("(^ *)|( *$)", "", contribs.geocoded.df$address.clean )
 
-contribs.geocoded.df$PNumber[is.na(contribs.geocoded.df$PNumber)<-"empty.remove.indicator"
-contribs.geocoded.df$PNumberFractional[is.na(contribs.geocoded.df$PNumberFractional)<-"empty.remove.indicator"
+contribs.geocoded.df$PNumber[is.na(contribs.geocoded.df$PNumber)]<-"empty.remove.indicator"
+contribs.geocoded.df$PNumberFractional[is.na(contribs.geocoded.df$PNumberFractional)]<-"empty.remove.indicator"
 
 for (i in address.cols) {
-  contribs.geocoded.df[contribs.geocoded.df[, i]=="empty.remove.indicator", i]<-NA
+  contribs.geocoded.df[is.na(contribs.geocoded.df[, i]) | 
+    contribs.geocoded.df[, i]=="empty.remove.indicator", i]<-NA
 }
-							 
-																			 Think about removing: PNumberFractional
-FPreDirectional	FPreQualifier	FName	FPostQualifier	FSuffix	FPostDirectional
-Preprocess to remove anything but numbers: PSuiteNumber
-contribs.geocoded.df$[is.na(contribs.geocoded.df$)<-"empty.remove.indicator"
 
-Take the first of these that is not NA: FCity	FCountySubRegion	FCounty
+View(contribs.geocoded.df[90000:91000, c("Address", "address.clean")])
 
-table(geocode.output.df$Match.Score==100, geocode.output.df$Match.Type)
+View(contribs.geocoded.df[90020, ])
 
+contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="USPSZipPlus4", c("FArea", "FAreaType")]
 
-contribs.df[contribs.df$geocode.id==1,]
-
-contribs.to.geocode.df[contribs.to.geocode.df$geocode.id==1,]
-
-test.df<-read.csv("http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsed_V02_96.aspx?streetAddress=9355%20Burton%20Way&city=Beverly%20Hills&state=ca&zip=90210&apikey=YOUR_API_KEY_HERE&format=csv&census=true&censusYear=2010&notStore=false&version=2.96")
-
-sapply(successful.geocode.1.v, FUN=length)
-
-geocode.output.leftover.ls<-geocode.output.ls[successful.geocode.v]
-table(sapply(geocode.output.leftover.ls, FUN=ncol))
+head(
+  contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="CountySubRegion", c("FArea", "FAreaType")]
+  )
 
 
-  
-# Examples for WebGIS:
-  https://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=PO%20Box%20123&city=Beverly%20Hills
-  &state=ca
-  &zip=90210&apikey=demo&format=csv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96
-  
-  
-  
-  
-  http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=
-  	9355%20Berton%20Way
-  &city=Bevirrly%20Hills&state=ca&zip=90210&apikey=demo&format=csv&census=true&censusYear=2010&notStore=false&verbose=true&sou=true&souatts=city&geom=true&version=2.96
-  
+
+# Take the first of these that is not NA: FCity  FCountySubRegion  FCounty
+
+contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]<-
+  contribs.geocoded.df$FCounty[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]
+
+contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$city.clean) & is.na(contribs.geocoded.df$FCity)]<-
+  contribs.geocoded.df$FCountySubRegion[is.na(contribs.geocoded.df$city.clean) & is.na(contribs.geocoded.df$FCity)]
+
+contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$city.clean)]<-
+  contribs.geocoded.df$FCity[is.na(contribs.geocoded.df$city.clean)]
+
+contribs.geocoded.df$state.clean<-contribs.geocoded.df$FState
+
+contribs.geocoded.df$zip.clean<-contribs.geocoded.df$FZipPlus4
+contribs.geocoded.df$zip.clean[is.na(contribs.geocoded.df$zip.clean)]<-contribs.geocoded.df$FZip[is.na(contribs.geocoded.df$zip.clean)]
+
+contribs.geocoded.df$Date.of.Receipt<-as.Date(contribs.geocoded.df$Date.of.Receipt, format="%m/%d/%Y")
+contribs.geocoded.df$Amount<-gsub("([$]|(,))", "", contribs.geocoded.df$Amount)
+neg.amounts.v<-grepl("^[(].*[)]$", contribs.geocoded.df$Amount)
+
+contribs.geocoded.df$Amount[neg.amounts.v]<-
+  gsub("[()]", "", contribs.geocoded.df$Amount[neg.amounts.v])
+
+contribs.geocoded.df$Amount[neg.amounts.v]<- 
+  paste("-", contribs.geocoded.df$Amount[neg.amounts.v], sep="")
+
+contribs.geocoded.df$Amount<-as.numeric(contribs.geocoded.df$Amount)
+
+contribs.geocoded.df$Amount[is.na(as.numeric(contribs.geocoded.df$Amount))]
+
+contribs.df<-contribs.geocoded.df
+
+
+gsub("[()]", "", "(67878)")
+
+                                       
+Think about removing: PNumberFractional
+
 library(lattice)
 
 install.packages("rgl")
