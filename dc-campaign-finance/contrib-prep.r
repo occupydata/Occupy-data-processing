@@ -88,17 +88,19 @@ DC.geocode.output.ls<-vector("list", length=2500)
 
 # nrow(DC.contribs.to.geocode.df)
 
+k<-1
+
 for ( i in 1:5100) {
   
-  DC.geocode.output.ls[[i]]<-
-    tryCatch(DC.geocode.output.ls[[i]]<-unlist(xmlToList(xmlParse(DC.contribs.to.geocode.df$DC.api.url[i]))),
+  DC.geocode.output.ls[[k]]<-
+    tryCatch(DC.geocode.output.ls[[k]]<-unlist(xmlToList(xmlParse(DC.contribs.to.geocode.df$DC.api.url[i]))),
              error = function(e) { "Error retrieving geocode" })
   
-  DC.geocode.output.ls[[i]]<-DC.geocode.output.ls[[i]][
+  DC.geocode.output.ls[[k]]<-DC.geocode.output.ls[[k]][
     !grepl("(^returnDataset.schema)|(^returnCDDataSet.schema)|(returnCDDataSet.diffgram)|([.][0-9]*$)", 
-    names(DC.geocode.output.ls[[i]])) ]
+    names(DC.geocode.output.ls[[k]])) ]
     
-  DC.geocode.output.ls[[i]]<-c(geocode.id=DC.contribs.to.geocode.df$geocode.id[i], DC.geocode.output.ls[[i]])
+  DC.geocode.output.ls[[k]]<-c(geocode.id=DC.contribs.to.geocode.df$geocode.id[i], DC.geocode.output.ls[[k]])
   
   cat(i, date(), "\n")
   flush.console()
@@ -106,10 +108,11 @@ for ( i in 1:5100) {
   if (check.integer(i/2500) | i==nrow(DC.contribs.to.geocode.df) ) {
 
     DC.geocode.output.ls<-lapply(DC.geocode.output.ls, t)
-    DC.geocode.output.ls<-lapply(DC.geocode.output.ls, data.frame, stringsAsFactors =FALSE)
+    DC.geocode.output.ls<-lapply(DC.geocode.output.ls, data.frame, stringsAsFactors=FALSE)
     DC.geocode.output.ls<-do.call(rbind.fill, DC.geocode.output.ls)  
     DC.geocoded.df<-rbind.fill(DC.geocoded.df, DC.geocode.output.ls)
     DC.geocode.output.ls<-vector("list", length=2500)
+    k<-1
     
   }
   
