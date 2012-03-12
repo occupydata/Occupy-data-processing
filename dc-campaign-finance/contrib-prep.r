@@ -13,38 +13,134 @@ files.to.stack<-list.files(path=paste(work.dir, "raw/", sep=""))
 
 files.to.stack<-files.to.stack[grepl("DC_contribs_", files.to.stack)]
 
-contribs.df<-read.csv(paste(work.dir, "raw/", files.to.stack[1], sep=""), stringsAsFactors=FALSE)
+contribs.raw.df<-read.csv(paste(work.dir, "raw/", files.to.stack[1], sep=""), stringsAsFactors=FALSE)
 
 for ( targ.file in files.to.stack[-1] ) {
 
   contribs.temp.df<-read.csv(paste(work.dir, "raw/", targ.file, sep=""), stringsAsFactors=FALSE)
 
-  contribs.df<-rbind(contribs.df, contribs.temp.df)
+  contribs.raw.df<-rbind(contribs.raw.df, contribs.temp.df)
 
 }
 
-contribs.to.geocode.df<-contribs.df[!duplicated(contribs.df[, c("Address", "city", "state", "Zip")]), 
+
+
+
+contribs.to.geocode.df<-contribs.raw.df[!duplicated(contribs.raw.df[, c("Address", "city", "state", "Zip")]), 
   c("Address", "city", "state", "Zip")]
 
 contribs.to.geocode.df$geocode.id<-1:nrow(contribs.to.geocode.df)
 
-contribs.df<-merge(contribs.df, contribs.to.geocode.df)
+contribs.raw.df<-merge(contribs.raw.df, contribs.to.geocode.df)
 
-geocode.output.ls<-vector("list", length=nrow(contribs.to.geocode.df))
+for ( i in 1:ncol(contribs.to.geocode.df)) {
+
+  contribs.to.geocode.df[, i]<-gsub("(^\t)|(\t$)", "", contribs.to.geocode.df[, i])
+  contribs.to.geocode.df[, i]<-gsub("\t", " ", contribs.to.geocode.df[, i])
+
+}
+
 
 URLencode.vec <- Vectorize(URLencode)
 # Find a fix for slow operation:
 # http://r.789695.n4.nabble.com/RFE-vectorize-URLdecode-td901435.html
 
+contribs.to.geocode.df$DC.geocoder<-FALSE
+
+contribs.to.geocode.df$DC.geocoder[
+  grepl("(^200)|(^202)|(^203)|(^204)|(^205)", contribs.to.geocode.df$Zip)]<-TRUE
+
+contribs.to.geocode.df$DC.geocoder[
+  contribs.to.geocode.df$state=="DC" & nchar(contribs.to.geocode.df$Zip)<4]<-TRUE
+# Anything with city?
+
+
+contribs.to.geocode.df$DC.geocoder[
+  contribs.to.geocode.df$Address=="" | is.na(contribs.to.geocode.df$Address)]<-FALSE
+
+DC.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$DC.geocoder, ]
+
+DC.contribs.to.geocode.df$DC.api.url<-paste(
+  "http://citizenatlas.dc.gov/newwebservices/locationverifier.asmx/verifyDCAddressThrouString?Address=",
+  URLencode.vec(DC.contribs.to.geocode.df$Address, reserved = TRUE),
+  sep=""
+  )
+# TO DO: Deal with this warning message: 1: In strsplit(URL, "") : input string 1 is invalid in this locale
+
+
+
+install.packages("sendmailR")
+install.packages("stringr")
+install.packages("XML")
+install.packages("reshape")
+
+library(sendmailR)
+library(stringr)
+library(XML)
+library(reshape)
+
+check.integer <- function(N){
+  !length(grep("[^[:digit:]]", format(N, scientific = FALSE)))
+}
+
+DC.geocoded.df<-data.frame(a="a", stringsAsFactors=FALSE)[FALSE, FALSE]
+DC.geocode.output.ls<-vector("list", length=2500)
+
+# nrow(DC.contribs.to.geocode.df)
+
+for ( i in 1:5100) {
+  
+  DC.geocode.output.ls[[i]]<-
+    tryCatch(DC.geocode.output.ls[[i]]<-unlist(xmlToList(xmlParse(DC.contribs.to.geocode.df$DC.api.url[i]))),
+             error = function(e) { "Error retrieving geocode" })
+  
+  DC.geocode.output.ls[[i]]<-DC.geocode.output.ls[[i]][
+    !grepl("(^returnDataset.schema)|(^returnCDDataSet.schema)|(returnCDDataSet.diffgram)|([.][0-9]*$)", 
+    names(DC.geocode.output.ls[[i]])) ]
+    
+  DC.geocode.output.ls[[i]]<-c(geocode.id=DC.contribs.to.geocode.df$geocode.id[i], DC.geocode.output.ls[[i]])
+  
+  cat(i, date(), "\n")
+  flush.console()
+
+  if (check.integer(i/2500) | i==nrow(DC.contribs.to.geocode.df) ) {
+
+    DC.geocode.output.ls<-lapply(DC.geocode.output.ls, t)
+    DC.geocode.output.ls<-lapply(DC.geocode.output.ls, data.frame, stringsAsFactors =FALSE)
+    DC.geocode.output.ls<-do.call(rbind.fill, DC.geocode.output.ls)  
+    DC.geocoded.df<-rbind.fill(DC.geocoded.df, DC.geocode.output.ls)
+    DC.geocode.output.ls<-vector("list", length=2500)
+    
+  }
+  
+}
+
+contribs.to.geocode.df<-merge(contribs.to.geocode.df, DC.geocoded.df, all=TRUE)
+
+contribs.to.geocode.df$USA.geocoder<-FALSE
+
+contribs.to.geocode.df$USA.geocoder[!contribs.to.geocode.df$DC.geocoder]<-TRUE
+contribs.to.geocode.df$USA.geocoder[contribs.to.geocode.df$returnDataset.diffgram.NewDataSet.Table1.ConfidenceLevel<80]<-TRUE
+
+USA.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$USA.geocoder, ]
+
+#Keep?
+#returnCDDataSet.diffgram.NewDataSet.Address_x0020_Return_x0020_Codes.Parsed_x0020__x0026__x0020_Normalized
+
+
+
+geocode.output.ls<-vector("list", length=nrow(USA.contribs.to.geocode.df))
+
+
 contribs.to.geocode.df$api.url<-paste(
   "http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=",
-  URLencode.vec(contribs.to.geocode.df$Address, reserved = TRUE),
+  URLencode.vec(USA.contribs.to.geocode.df$Address, reserved = TRUE),
   "&city=",
-  URLencode.vec(contribs.to.geocode.df$city, reserved = TRUE),
+  URLencode.vec(USA.contribs.to.geocode.df$city, reserved = TRUE),
   "&state=",
-  URLencode.vec(contribs.to.geocode.df$state, reserved = TRUE),
+  URLencode.vec(USA.contribs.to.geocode.df$state, reserved = TRUE),
   "&zip=",
-  URLencode.vec(contribs.to.geocode.df$Zip, reserved = TRUE),
+  URLencode.vec(USA.contribs.to.geocode.df$Zip, reserved = TRUE),
   "&apikey=YOUR_API_KEY_HERE&format=tsv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
   sep=""
   )
@@ -53,19 +149,17 @@ contribs.to.geocode.df$api.url<-paste(
 # observs<-sample(1:nrow(contribs.to.geocode.df), 2000)
 # observs[i]
 
-check.integer <- function(N){
-  !length(grep("[^[:digit:]]", format(N, scientific = FALSE)))
-}
-
 library(sendmailR)
 library(stringr)
 
 credits<-2000
 
-for ( i in 24300:nrow(contribs.to.geocode.df)) {
+for ( i in 24300:nrow(USA.contribs.to.geocode.df)) {
   
   geocode.output.ls[[i]]<-
-    tryCatch(read.delim(contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE),
+    tryCatch(cbind(data.frame(
+      geocode.id=USA.contribs.to.geocode.df$geocode.id[i], stringsAsFactor=FALSE),
+      read.delim(USA.contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE)),
              error = function(e) { "Error retrieving geocode" })
   
   cat(date(), "\n")
@@ -120,37 +214,19 @@ successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
 
 
 geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=122, byrow=TRUE)
-geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
+USA.geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
 
-colnames(geocode.output.df)<-c("Transaction.Id", "API.Version", "Query.Status.Code", "Latitude", "Longitude", "Match.Score", "Match.Type", "Matching.Geography.Type", "Interpolation.Type", "Interpolation.Sub.Type", "Matched.Location.Type", "Feature.Matching.Result.Type", "FeatureMatchingResultCount", "FeatureMatchingResultTypeNotes", "TieHandlingStrategyType", "FeatureMatchingResultTypeTieBreakingNotes", "FeatureMatchingSelectionMethod", "FeatureMatchingSelectionMethodNotes", "Time.Taken", "Census.Year", "Census.Block", "Census.Block.Group", "Census.Tract", "Census.County.Fips", "Census.CBSA.Fips", "Census.CBSA.Micro", "Census.MCD.Fips", "Census.MetDiv.Fips", "Census.MSA.Fips", "Census.Place.Fips", "Census.State.Fips", "MNumber", "MNumberFractional", "MPreDirectional", "MPreQualifier", "MPreType", "MPreArticle", "MName", "MPostArticle", "MPostQualifier", "MSuffix", "MPostDirectional", "MSuiteType", "MSuiteNumber", "MPostOfficeBoxType", "MPostOfficeBoxNumber", "MCity", "MConsolidatedCity", "MMinorCivilDivision", "MCountySubRegion", "MCounty", "MState", "MZip", "MZipPlus1", "MZipPlus2", "MZipPlus3", "MZipPlus4", "MZipPlus5", "PNumber", "PNumberFractional", "PPreDirectional", "PPreQualifier", "PPreType", "PPreArticle", "PName", "PPostArticle", "PPostQualifier", "PSuffix", "PPostDirectional", "PSuiteType", "PSuiteNumber", "PPostOfficeBoxType", "PPostOfficeBoxNumber", "PCity", "PConsolidatedCity", "PMinorCivilDivision", "PCountySubRegion", "PCounty", "PState", "PZip", "PZipPlus1", "PZipPlus2", "PZipPlus3", "PZipPlus4", "PZipPlus5", "FNumber", "FNumberFractional", "FPreDirectional", "FPreQualifier", "FPreType", "FPreArticle", "FName", "FPostArticle", "FPostQualifier", "FSuffix", "FPostDirectional", "FSuiteType", "FSuiteNumber", "FPostOfficeBoxType", "FPostOfficeBoxNumber", "FCity", "FConsolidatedCity", "FMinorCivilDivision", "FCountySubRegion", "FCounty", "FState", "FZip", "FZipPlus1", "FZipPlus2", "FZipPlus3", "FZipPlus4", "FZipPlus5", "FArea", "FAreaType", "FGeometrySRID", "FGeometry", "FSource", "FVintage", "FPrimaryIdField", "FPrimaryIdValue", "FSecondaryIdField", "FSecondaryIdValue")
+colnames(USA.geocode.output.df)<-c("Transaction.Id", "API.Version", "Query.Status.Code", "Latitude", "Longitude", "Match.Score", "Match.Type", "Matching.Geography.Type", "Interpolation.Type", "Interpolation.Sub.Type", "Matched.Location.Type", "Feature.Matching.Result.Type", "FeatureMatchingResultCount", "FeatureMatchingResultTypeNotes", "TieHandlingStrategyType", "FeatureMatchingResultTypeTieBreakingNotes", "FeatureMatchingSelectionMethod", "FeatureMatchingSelectionMethodNotes", "Time.Taken", "Census.Year", "Census.Block", "Census.Block.Group", "Census.Tract", "Census.County.Fips", "Census.CBSA.Fips", "Census.CBSA.Micro", "Census.MCD.Fips", "Census.MetDiv.Fips", "Census.MSA.Fips", "Census.Place.Fips", "Census.State.Fips", "MNumber", "MNumberFractional", "MPreDirectional", "MPreQualifier", "MPreType", "MPreArticle", "MName", "MPostArticle", "MPostQualifier", "MSuffix", "MPostDirectional", "MSuiteType", "MSuiteNumber", "MPostOfficeBoxType", "MPostOfficeBoxNumber", "MCity", "MConsolidatedCity", "MMinorCivilDivision", "MCountySubRegion", "MCounty", "MState", "MZip", "MZipPlus1", "MZipPlus2", "MZipPlus3", "MZipPlus4", "MZipPlus5", "PNumber", "PNumberFractional", "PPreDirectional", "PPreQualifier", "PPreType", "PPreArticle", "PName", "PPostArticle", "PPostQualifier", "PSuffix", "PPostDirectional", "PSuiteType", "PSuiteNumber", "PPostOfficeBoxType", "PPostOfficeBoxNumber", "PCity", "PConsolidatedCity", "PMinorCivilDivision", "PCountySubRegion", "PCounty", "PState", "PZip", "PZipPlus1", "PZipPlus2", "PZipPlus3", "PZipPlus4", "PZipPlus5", "FNumber", "FNumberFractional", "FPreDirectional", "FPreQualifier", "FPreType", "FPreArticle", "FName", "FPostArticle", "FPostQualifier", "FSuffix", "FPostDirectional", "FSuiteType", "FSuiteNumber", "FPostOfficeBoxType", "FPostOfficeBoxNumber", "FCity", "FConsolidatedCity", "FMinorCivilDivision", "FCountySubRegion", "FCounty", "FState", "FZip", "FZipPlus1", "FZipPlus2", "FZipPlus3", "FZipPlus4", "FZipPlus5", "FArea", "FAreaType", "FGeometrySRID", "FGeometry", "FSource", "FVintage", "FPrimaryIdField", "FPrimaryIdValue", "FSecondaryIdField", "FSecondaryIdValue")
 
-geocode.output.df$geocode.id<-which(successful.geocode.v)
 
-geocode.output.df<-geocode.output.df[, 
+USA.geocode.output.df<-USA.geocode.output.df[, 
   apply(geocode.output.df, MARGIN=2, FUN=function(x) {!all(is.na(x))})
   ]
 
 
-contribs.df$DUPS<-duplicated(contribs.df[, c("Address", "city", "state", "Zip")])
 
-k<-1
 
-for ( i in 1:nrow(contribs.df)) {
-  if (contribs.df$DUPS[i]) {
-    contribs.df$geocode.id[i]<-k
-  } else {
-    k<-k+1
-    contribs.df$geocode.id[i]<-k
-  }
-    
-}
-
-#### THIS IS NECESSARY SINCE SOMEHOW THE GEOCODES WERE SCRAMBLED. MUST FIX IN FINAL
-#### VERSION OF CODE ABOVE
-
-#contribs.df$geocode.id<-contribs.df$geocode.id-1
-
-contribs.geocoded.df<-merge(contribs.df, geocode.output.df)
+contribs.geocoded.df<-merge(contribs.raw.df, USA.geocode.output.df)
 
 #contribs.geocoded.df<-geocode.output.df
 
@@ -202,15 +278,7 @@ for (i in address.cols) {
     contribs.geocoded.df[, i]=="empty.remove.indicator", i]<-NA
 }
 
-View(contribs.geocoded.df[90000:91000, c("Address", "address.clean")])
 
-View(contribs.geocoded.df[90020, ])
-
-contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="USPSZipPlus4", c("FArea", "FAreaType")]
-
-head(
-  contribs.geocoded.df[contribs.geocoded.df$Matching.Geography.Type=="CountySubRegion", c("FArea", "FAreaType")]
-  )
 
 
 
@@ -244,8 +312,35 @@ contribs.geocoded.df$Amount<-as.numeric(contribs.geocoded.df$Amount)
 
 contribs.geocoded.df$Amount[is.na(as.numeric(contribs.geocoded.df$Amount))]
 
+contribs.geocoded.df<-merge(contribs.geocoded.df, 
+  contribs.to.geocode.df[, c("geocode.id", "DC.geocoder", "USA.geocoder")], all=TRUE)
+
+
+contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "address.clean"]<-
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS"]
+
+contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"]<-
+  paste(contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"],
+    " No. ", contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "UNITNUMBER"],
+    sep="")
+
+contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "zip.clean"]<-
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "returnDataset.diffgram.NewDataSet.Table1.ZIPCODE"]
+
+contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "city.clean"]<-"Washington"
+contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "state.clean"]<-"DC"
+
+
+
+
+# DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX)]
+
+# TO DO: Must do something with this: returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX
+
+
 contribs.df<-contribs.geocoded.df
 
+# DC.contribs.to.geocode.df[1:720, ][!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX), ]
 
 gsub("[()]", "", "(67878)")
 
