@@ -106,6 +106,10 @@ for ( i in 1:nrow(DC.contribs.to.geocode.df)) {
   
   cat(i, date(), "\n")
   flush.console()
+  
+  if (i==nrow(DC.contribs.to.geocode.df)) {
+    DC.geocode.output.ls<-DC.geocode.output.ls[lapply(DC.geocode.output.ls, length)!=0]
+  }
 
   if (check.integer(i/2500) | i==nrow(DC.contribs.to.geocode.df) ) {
 
@@ -126,7 +130,7 @@ names(DC.geocoded.df)<-gsub("returnDataset[.]diffgram[.]NewDataSet[.]Table1[.]",
 
 names(DC.geocoded.df)[names(DC.geocoded.df) != "geocode.id"]<-paste("DC.geocoder.", names(DC.geocoded.df)[names(DC.geocoded.df) != "geocode.id"], sep="")
 
-contribs.to.geocode.df$DC.geocoder.ConfidenceLevel<-as.numeric(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel)
+DC.geocoded.df$DC.geocoder.ConfidenceLevel<-as.numeric(DC.geocoded.df$DC.geocoder.ConfidenceLevel)
 
 contribs.to.geocode.df<-merge(contribs.to.geocode.df, DC.geocoded.df, all=TRUE)
 
