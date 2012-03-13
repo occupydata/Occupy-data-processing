@@ -122,13 +122,20 @@ for ( i in 1:nrow(DC.contribs.to.geocode.df)) {
   
 }
 
+names(DC.geocoded.df)<-gsub("returnDataset[.]diffgram[.]NewDataSet[.]Table1[.]", "", names(DC.geocoded.df))
+
+names(DC.geocoded.df)[names(DC.geocoded.df) != "geocode.id"]<-paste("DC.geocoder.", names(DC.geocoded.df)[names(DC.geocoded.df) != "geocode.id"], sep="")
+
+contribs.to.geocode.df$DC.geocoder.ConfidenceLevel<-as.numeric(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel)
 
 contribs.to.geocode.df<-merge(contribs.to.geocode.df, DC.geocoded.df, all=TRUE)
 
 contribs.to.geocode.df$USA.geocoder<-FALSE
 
 contribs.to.geocode.df$USA.geocoder[!contribs.to.geocode.df$DC.geocoder]<-TRUE
-contribs.to.geocode.df$USA.geocoder[contribs.to.geocode.df$returnDataset.diffgram.NewDataSet.Table1.ConfidenceLevel<80]<-TRUE
+contribs.to.geocode.df$USA.geocoder[!is.na(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel) &
+  contribs.to.geocode.df$DC.geocoder.ConfidenceLevel<80]<-TRUE
+contribs.to.geocode.df$USA.geocoder[is.na(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel)]<-TRUE
 
 USA.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$USA.geocoder, ]
 
@@ -325,7 +332,7 @@ contribs.geocoded.df<-merge(contribs.geocoded.df,
 
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "address.clean"]<-
-  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS"]
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.FULLADDRESS"]
 
 contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"]<-
   paste(contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"],
@@ -333,7 +340,7 @@ contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"]<
     sep="")
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "zip.clean"]<-
-  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "returnDataset.diffgram.NewDataSet.Table1.ZIPCODE"]
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.ZIPCODE"]
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "city.clean"]<-"Washington"
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "state.clean"]<-"DC"
