@@ -134,12 +134,50 @@ DC.geocoded.df$DC.geocoder.ConfidenceLevel<-as.numeric(DC.geocoded.df$DC.geocode
 
 contribs.to.geocode.df<-merge(contribs.to.geocode.df, DC.geocoded.df, all=TRUE)
 
+
+contribs.to.geocode.df$DC.geocoder.address.clean<-contribs.to.geocode.df$DC.geocoder.FULLADDRESS
+
+addr.suffix.v<-which(!is.na(contribs.to.geocode.df$DC.geocoder.ADDRNUMSUFFIX))
+
+
+for ( i in length(addr.suffix.v):1) {
+	
+  if (grepl(paste("^[0-9]+ ", contribs.to.geocode.df$DC.geocoder.ADDRNUMSUFFIX[addr.suffix.v][i], sep=""),
+    contribs.to.geocode.df$DC.geocoder.FULLADDRESS[addr.suffix.v][i]) ) {
+    
+    addr.suffix.v<-addr.suffix.v[-i]
+    
+  }
+  
+}
+
+DC.geocoder.address.clean[addr.suffix.v]<-paste(
+  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[add.suffix.v], " "), 
+    FUN=function(x) { x[1]} ),
+  contribs.to.geocode.df$DC.geocoder.ADDRNUMSUFFIX[addr.suffix.v],
+  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[add.suffix.v], "^[0-9]+ "), 
+    FUN=function(x) { x[2]} ),
+  sep=" "
+)
+
+
+contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)]<-
+  paste(contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)],
+    "No."
+    contribs.to.geocode.df$DC.geocoder.UNITNUMBER[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)],
+    sep=" " )
+
+contribs.to.geocode.df$DC.geocoder.city.clean<-contribs.to.geocode.df$DC.geocoder.CITY
+contribs.to.geocode.df$DC.geocoder.state.clean<-contribs.to.geocode.df$DC.geocoder.STATE
+contribs.to.geocode.df$DC.geocoder.zip.clean<-contribs.to.geocode.df$DC.geocoder.ZIPCODE
+
 contribs.to.geocode.df$USA.geocoder<-FALSE
 
 contribs.to.geocode.df$USA.geocoder[!contribs.to.geocode.df$DC.geocoder]<-TRUE
 contribs.to.geocode.df$USA.geocoder[!is.na(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel) &
   contribs.to.geocode.df$DC.geocoder.ConfidenceLevel<80]<-TRUE
 contribs.to.geocode.df$USA.geocoder[is.na(contribs.to.geocode.df$DC.geocoder.ConfidenceLevel)]<-TRUE
+
 
 USA.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$USA.geocoder, ]
 
@@ -264,7 +302,7 @@ for (i in address.cols) {
   contribs.geocoded.df[is.na(contribs.geocoded.df[, i]), i]<-"empty.remove.indicator"
 }
 
-contribs.geocoded.df$address.clean<-paste(
+contribs.geocoded.df$USA.geocoder.address.clean<-paste(
   contribs.geocoded.df[, address.cols[1]],
   contribs.geocoded.df[, address.cols[2]],
   contribs.geocoded.df[, address.cols[3]],
@@ -279,15 +317,15 @@ contribs.geocoded.df$address.clean<-paste(
   sep=" "
 )
 
-contribs.geocoded.df$address.clean<-gsub("No[.] empty[.]remove[.]indicator", "", contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("No[.] empty[.]remove[.]indicator", "", contribs.geocoded.df$USA.geocoder.address.clean )
 
-contribs.geocoded.df$address.clean<-gsub("empty[.]remove[.]indicator", "", contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("empty[.]remove[.]indicator", "", contribs.geocoded.df$address.clean )
 
-contribs.geocoded.df$address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$USA.geocoder.address.clean )
 
-contribs.geocoded.df$address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$USA.geocoder.address.clean )
 
-contribs.geocoded.df$address.clean<-gsub("(^ *)|( *$)", "", contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("(^ *)|( *$)", "", contribs.geocoded.df$USA.geocoder.address.clean )
 
 contribs.geocoded.df$PNumber[is.na(contribs.geocoded.df$PNumber)]<-"empty.remove.indicator"
 contribs.geocoded.df$PNumberFractional[is.na(contribs.geocoded.df$PNumberFractional)]<-"empty.remove.indicator"
@@ -303,19 +341,19 @@ for (i in address.cols) {
 
 # Take the first of these that is not NA: FCity  FCountySubRegion  FCounty
 
-contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]<-
+contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]<-
   contribs.geocoded.df$FCounty[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]
 
-contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$city.clean) & is.na(contribs.geocoded.df$FCity)]<-
-  contribs.geocoded.df$FCountySubRegion[is.na(contribs.geocoded.df$city.clean) & is.na(contribs.geocoded.df$FCity)]
+contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$cUSA.geocoder.ity.clean) & is.na(contribs.geocoded.df$FCity)]<-
+  contribs.geocoded.df$FCountySubRegion[is.na(contribs.geocoded.df$USA.geocoder.city.clean) & is.na(contribs.geocoded.df$FCity)]
 
-contribs.geocoded.df$city.clean[is.na(contribs.geocoded.df$city.clean)]<-
-  contribs.geocoded.df$FCity[is.na(contribs.geocoded.df$city.clean)]
+contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$USA.geocoder.city.clean)]<-
+  contribs.geocoded.df$FCity[is.na(contribs.geocoded.df$USA.geocoder.city.clean)]
 
-contribs.geocoded.df$state.clean<-contribs.geocoded.df$FState
+contribs.geocoded.df$USA.geocoder.state.clean<-contribs.geocoded.df$FState
 
-contribs.geocoded.df$zip.clean<-contribs.geocoded.df$FZipPlus4
-contribs.geocoded.df$zip.clean[is.na(contribs.geocoded.df$zip.clean)]<-contribs.geocoded.df$FZip[is.na(contribs.geocoded.df$zip.clean)]
+contribs.geocoded.df$USA.geocoder.zip.clean<-contribs.geocoded.df$FZipPlus4
+contribs.geocoded.df$USA.geocoder.zip.clean[is.na(contribs.geocoded.df$USA.geocoder.zip.clean)]<-contribs.geocoded.df$FZip[is.na(contribs.geocoded.df$USA.geocoder.zip.clean)]
 
 contribs.geocoded.df$Date.of.Receipt<-as.Date(contribs.geocoded.df$Date.of.Receipt, format="%m/%d/%Y")
 contribs.geocoded.df$Amount<-gsub("([$]|(,))", "", contribs.geocoded.df$Amount)
@@ -334,17 +372,16 @@ contribs.geocoded.df$Amount[is.na(as.numeric(contribs.geocoded.df$Amount))]
 contribs.geocoded.df<-merge(contribs.geocoded.df, 
   contribs.to.geocode.df[, c("geocode.id", "DC.geocoder", "USA.geocoder")], all=TRUE)
 
+contribs.geocoded.df$address.clean<-contribs.geocoded.df$USA.geocoder.address.clean
+contribs.geocoded.df$city.clean<-contribs.geocoded.df$USA.geocoder.city.clean
+contribs.geocoded.df$state.clean<-contribs.geocoded.df$USA.geocoder.state.clean
+contribs.geocoded.df$zip.clean<-contribs.geocoded.df$USA.geocoder.zip.clean
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "address.clean"]<-
-  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.FULLADDRESS"]
-
-contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"]<-
-  paste(contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "address.clean"],
-    " No. ", contribs.geocoded.df[!is.na(contribs.geocoded.df$UNITNUMBER)], "UNITNUMBER"],
-    sep="")
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.address.clean"]
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "zip.clean"]<-
-  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.ZIPCODE"]
+  contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "DC.geocoder.zip.clean"]
 
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "city.clean"]<-"Washington"
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "state.clean"]<-"DC"
@@ -353,8 +390,6 @@ contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "state.clean"]<-"DC"
 
 
 # DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX)]
-
-# TO DO: Must do something with this: returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX
 
 
 contribs.df<-contribs.geocoded.df
