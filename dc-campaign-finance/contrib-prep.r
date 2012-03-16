@@ -151,20 +151,21 @@ for ( i in length(addr.suffix.v):1) {
   
 }
 
-DC.geocoder.address.clean[addr.suffix.v]<-paste(
-  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[add.suffix.v], " "), 
+contribs.to.geocode.df$DC.geocoder.address.clean[addr.suffix.v]<-paste(
+  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[addr.suffix.v], " "), 
     FUN=function(x) { x[1]} ),
   contribs.to.geocode.df$DC.geocoder.ADDRNUMSUFFIX[addr.suffix.v],
-  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[add.suffix.v], "^[0-9]+ "), 
+  sapply(strsplit( contribs.to.geocode.df$DC.geocoder.FULLADDRESS[addr.suffix.v], "^[0-9]+ "), 
     FUN=function(x) { x[2]} ),
   sep=" "
 )
 
+contribs.to.geocode.df[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER) & is.na(contribs.to.geocode.df$DC.geocoder.address.clean), ][1, ]
 
-contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)]<-
-  paste(contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)],
-    "No."
-    contribs.to.geocode.df$DC.geocoder.UNITNUMBER[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER)],
+contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER) & !is.na(contribs.to.geocode.df$DC.geocoder.address.clean)]<-
+  paste(contribs.to.geocode.df$DC.geocoder.address.clean[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER & !is.na(contribs.to.geocode.df$DC.geocoder.address.clean))],
+    "No.",
+    contribs.to.geocode.df$DC.geocoder.UNITNUMBER[!is.na(contribs.to.geocode.df$DC.geocoder.UNITNUMBER & !is.na(contribs.to.geocode.df$DC.geocoder.address.clean))],
     sep=" " )
 
 contribs.to.geocode.df$DC.geocoder.city.clean<-contribs.to.geocode.df$DC.geocoder.CITY
@@ -189,7 +190,7 @@ USA.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$USA.ge
 geocode.output.ls<-vector("list", length=nrow(USA.contribs.to.geocode.df))
 
 
-contribs.to.geocode.df$api.url<-paste(
+USA.contribs.to.geocode.df$api.url<-paste(
   "http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=",
   URLencode.vec(USA.contribs.to.geocode.df$Address, reserved = TRUE),
   "&city=",
@@ -211,7 +212,7 @@ library(stringr)
 
 credits<-2000
 
-for ( i in 24300:nrow(USA.contribs.to.geocode.df)) {
+for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
   
   geocode.output.ls[[i]]<-
     tryCatch(cbind(data.frame(
@@ -219,7 +220,7 @@ for ( i in 24300:nrow(USA.contribs.to.geocode.df)) {
       read.delim(USA.contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE)),
              error = function(e) { "Error retrieving geocode" })
   
-  cat(date(), "\n")
+  cat(i , "of", nrow(USA.contribs.to.geocode.df), date(), "\n")
   flush.console()
   
   credits <- credits - 1
