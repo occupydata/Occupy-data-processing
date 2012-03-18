@@ -1,46 +1,14 @@
 
-Poblacion_dist = matrix( 
-c("MADRIZ", 0.3, 
-"BARCCELONA", 0.25, 
-"BILAO", 0.135, 
-"SEVILA", 0.1, 
-"VALENCCIA", 0.1, 
-"CORUNA", 0.025, 
-"ALACANNTE",0.025, 
-"VALLADOLI", 0.025, 
-"SANTIAGNO", 0.01, 
-"SAN SEBASIAN", 0.01, 
-"CADIZA", 0.01, 
-"ZARAGOZ", 0.01), 
-ncol = 2, byrow=T) 
+# TO DO: Capitalization may be a problem (i.e. all caps)
 
-# True locations 
-Poblacion = matrix( 
-c("MADRID", 0.3, 
-"BARCELONA", 0.25, 
-"BILBAO", 0.135, 
-"SEVILLA", 0.1, 
-"VALENCIA", 0.1, 
-"CORUÑA", 0.025, 
-"ALICANTE",0.025, 
-"VALLADOLID", 0.025, 
-"SANTIAGO", 0.01, 
-"SAN_SEBASTIAN", 0.01, 
-"CADIZ", 0.01, 
-"ZARAGOZA", 0.01), 
-ncol = 2, byrow=T) 
+fix.inconsistent.text<-function(inconsistent.strings, grouping.threshold=0.35, exact.digits=TRUE, plot.clusters=FALSE) {
 
-muestrear = function(que, cuantas_veces){ 
-	sample(que[,1], prob = as.numeric(que[,2]), cuantas_veces) 
-} 
+inconsistent.strings.tab<-table(inconsistent.strings)
 
-Provincias = ((replicate(10,c(muestrear(Poblacion,1), c(muestrear(Poblacion_dist,1)))))) 
+inconsistent.strings.uniq<-unique(names(inconsistent.strings.tab))
+# inconsistent.strings.uniq<-inconsistent.strings
 
-
-# now we have a list with 20 locations 
-Provincias = Provincias[1:length(Provincias)] 
-
-# next we need to process each location as a set of trigrams 
+# next we need to process each string as a set of trigrams 
 word2trigram = function(word){ 
 	trigramatrix =  matrix(c(seq(1, nchar(word)-2), seq(1, nchar(word)-2)+2), ncol = 2, byrow = F) 
 	trigram = c() 
@@ -49,12 +17,13 @@ word2trigram = function(word){
 	} 
 	return(trigram) 
 } 
-Prov2trigram = lapply(Provincias, word2trigram) 
+
+Prov2trigram = lapply(inconsistent.strings.uniq, word2trigram) 
 
 # every trigram in the sample 
 Trigrams = levels(factor((unlist(Prov2trigram)))) 
 
-# we get how many times appears a trigram in a location 
+# we get how many times a trigram appears in a string
 ocrrnc.mtrx = matrix(rep(0,length(Trigrams)* length(Prov2trigram)), ncol = length(Prov2trigram)) 
 for (i in 1:ncol(ocrrnc.mtrx)) { 
 	ocrrnc.mtrx[,i] = as.integer(table(append(Prov2trigram[[i]], Trigrams))-1) 
@@ -78,16 +47,48 @@ matrizCos = function(X){
 rslt.dst.mat = matrizCos(ocrrnc.mtrx) 
 
 # and get the clusters 
-attr(rslt.dst.mat , "dimnames")<-list(Provincias , Provincias ) 
-plot(hclust(as.dist(1-rslt.dst.mat),method = 'med')) 
+attr(rslt.dst.mat , "dimnames")<-list(inconsistent.strings.uniq , inconsistent.strings.uniq ) 
 
+hc <- hclust(as.dist(1-rslt.dst.mat), method = "single")
 
+if (plot.clusters) { plot(hc, cex=.5) }
+# TO DO: adjust cex according to length of input string
 
-hc <- hclust(as.dist(1-rslt.dst.mat)  ,method = 'med')
+hc.cut<-cutree(hc, h=grouping.threshold)
 
-hc$height <- sort(jitter(hc$height))
+ret.df<-data.frame(inconsistent=names(hc.cut), consistent=NA, stringsAsFactors=FALSE)
 
-#cutree(hc, k=1:5) #k = 1 is trivial
-cutree(as.hclust(hc), h=.4)
+for ( i in 1:length(unique(hc.cut))) {
 
+	match.strings.tab<-inconsistent.strings.tab[names(inconsistent.strings.tab) %in% 
+	  names(hc.cut)[i==hc.cut]]
+
+  if (length(which(match.strings.tab == max(match.strings.tab)))==1) {
+  
+  	ret.df$consistent[ret.df$inconsistent %in% names(match.strings.tab)]<-
+  		names(match.strings.tab[which.max(match.strings.tab)])
+  	
+  } else {
+  	
+    max.names<-names(match.strings.tab)[which(match.strings.tab == max(match.strings.tab))]
+    max.names.char<-max.names[nchar(max.names) == max(nchar(max.names))]
+    ret.df$consistent[ret.df$inconsistent %in% names(match.strings.tab)]<-
+    	  sample(max.names.char, 1)
+  }
+}
+
+if (exact.digits) {
+	
+	revert.v<-gsub("[^0-9]", "", ret.df$inconsistent)!=gsub("[^0-9]", "", ret.df$consistent)
+	
+	ret.df$consistent[revert.v]<-ret.df$inconsistent[revert.v]
+	
+}
+
+ret.df<-merge(data.frame(inconsistent=inconsistent.strings,
+  orig.order=1:length(inconsistent.strings), stringsAsFactors=FALSE), ret.df, all=TRUE)
+
+ret.df[order(ret.df$orig.order), c("orig.order", "inconsistent", "consistent")]
+
+}
 
