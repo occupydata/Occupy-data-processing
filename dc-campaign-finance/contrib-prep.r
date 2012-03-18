@@ -1,4 +1,6 @@
 
+# TO DO: Could use "DC.geocoder.details"  for standaized non-geocoded addresses
+
 work.dir<-""
 # Put your working directory here
 
@@ -216,7 +218,7 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
   
   geocode.output.ls[[i]]<-
     tryCatch(cbind(data.frame(
-      geocode.id=USA.contribs.to.geocode.df$geocode.id[i], stringsAsFactor=FALSE),
+      geocode.id=USA.contribs.to.geocode.df$geocode.id[i], stringsAsFactors=FALSE),
       read.delim(USA.contribs.to.geocode.df$api.url[i], header=FALSE, stringsAsFactors=FALSE)),
              error = function(e) { "Error retrieving geocode" })
   
@@ -264,27 +266,28 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
 # geocode.output.ls<-geocode.output.ls[1:31441]
 successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
   if(is.data.frame(x)) {
-    ret<-ncol(x)==122 
+    ret<-ncol(x)==123
   } else {
     ret<-FALSE
   } 
   ret})
 
 
-geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=122, byrow=TRUE)
+
+geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=123, byrow=TRUE)
 USA.geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
 
-colnames(USA.geocode.output.df)<-c("Transaction.Id", "API.Version", "Query.Status.Code", "Latitude", "Longitude", "Match.Score", "Match.Type", "Matching.Geography.Type", "Interpolation.Type", "Interpolation.Sub.Type", "Matched.Location.Type", "Feature.Matching.Result.Type", "FeatureMatchingResultCount", "FeatureMatchingResultTypeNotes", "TieHandlingStrategyType", "FeatureMatchingResultTypeTieBreakingNotes", "FeatureMatchingSelectionMethod", "FeatureMatchingSelectionMethodNotes", "Time.Taken", "Census.Year", "Census.Block", "Census.Block.Group", "Census.Tract", "Census.County.Fips", "Census.CBSA.Fips", "Census.CBSA.Micro", "Census.MCD.Fips", "Census.MetDiv.Fips", "Census.MSA.Fips", "Census.Place.Fips", "Census.State.Fips", "MNumber", "MNumberFractional", "MPreDirectional", "MPreQualifier", "MPreType", "MPreArticle", "MName", "MPostArticle", "MPostQualifier", "MSuffix", "MPostDirectional", "MSuiteType", "MSuiteNumber", "MPostOfficeBoxType", "MPostOfficeBoxNumber", "MCity", "MConsolidatedCity", "MMinorCivilDivision", "MCountySubRegion", "MCounty", "MState", "MZip", "MZipPlus1", "MZipPlus2", "MZipPlus3", "MZipPlus4", "MZipPlus5", "PNumber", "PNumberFractional", "PPreDirectional", "PPreQualifier", "PPreType", "PPreArticle", "PName", "PPostArticle", "PPostQualifier", "PSuffix", "PPostDirectional", "PSuiteType", "PSuiteNumber", "PPostOfficeBoxType", "PPostOfficeBoxNumber", "PCity", "PConsolidatedCity", "PMinorCivilDivision", "PCountySubRegion", "PCounty", "PState", "PZip", "PZipPlus1", "PZipPlus2", "PZipPlus3", "PZipPlus4", "PZipPlus5", "FNumber", "FNumberFractional", "FPreDirectional", "FPreQualifier", "FPreType", "FPreArticle", "FName", "FPostArticle", "FPostQualifier", "FSuffix", "FPostDirectional", "FSuiteType", "FSuiteNumber", "FPostOfficeBoxType", "FPostOfficeBoxNumber", "FCity", "FConsolidatedCity", "FMinorCivilDivision", "FCountySubRegion", "FCounty", "FState", "FZip", "FZipPlus1", "FZipPlus2", "FZipPlus3", "FZipPlus4", "FZipPlus5", "FArea", "FAreaType", "FGeometrySRID", "FGeometry", "FSource", "FVintage", "FPrimaryIdField", "FPrimaryIdValue", "FSecondaryIdField", "FSecondaryIdValue")
+colnames(USA.geocode.output.df)<-c("geocode.id", "Transaction.Id", "API.Version", "Query.Status.Code", "Latitude", "Longitude", "Match.Score", "Match.Type", "Matching.Geography.Type", "Interpolation.Type", "Interpolation.Sub.Type", "Matched.Location.Type", "Feature.Matching.Result.Type", "FeatureMatchingResultCount", "FeatureMatchingResultTypeNotes", "TieHandlingStrategyType", "FeatureMatchingResultTypeTieBreakingNotes", "FeatureMatchingSelectionMethod", "FeatureMatchingSelectionMethodNotes", "Time.Taken", "Census.Year", "Census.Block", "Census.Block.Group", "Census.Tract", "Census.County.Fips", "Census.CBSA.Fips", "Census.CBSA.Micro", "Census.MCD.Fips", "Census.MetDiv.Fips", "Census.MSA.Fips", "Census.Place.Fips", "Census.State.Fips", "MNumber", "MNumberFractional", "MPreDirectional", "MPreQualifier", "MPreType", "MPreArticle", "MName", "MPostArticle", "MPostQualifier", "MSuffix", "MPostDirectional", "MSuiteType", "MSuiteNumber", "MPostOfficeBoxType", "MPostOfficeBoxNumber", "MCity", "MConsolidatedCity", "MMinorCivilDivision", "MCountySubRegion", "MCounty", "MState", "MZip", "MZipPlus1", "MZipPlus2", "MZipPlus3", "MZipPlus4", "MZipPlus5", "PNumber", "PNumberFractional", "PPreDirectional", "PPreQualifier", "PPreType", "PPreArticle", "PName", "PPostArticle", "PPostQualifier", "PSuffix", "PPostDirectional", "PSuiteType", "PSuiteNumber", "PPostOfficeBoxType", "PPostOfficeBoxNumber", "PCity", "PConsolidatedCity", "PMinorCivilDivision", "PCountySubRegion", "PCounty", "PState", "PZip", "PZipPlus1", "PZipPlus2", "PZipPlus3", "PZipPlus4", "PZipPlus5", "FNumber", "FNumberFractional", "FPreDirectional", "FPreQualifier", "FPreType", "FPreArticle", "FName", "FPostArticle", "FPostQualifier", "FSuffix", "FPostDirectional", "FSuiteType", "FSuiteNumber", "FPostOfficeBoxType", "FPostOfficeBoxNumber", "FCity", "FConsolidatedCity", "FMinorCivilDivision", "FCountySubRegion", "FCounty", "FState", "FZip", "FZipPlus1", "FZipPlus2", "FZipPlus3", "FZipPlus4", "FZipPlus5", "FArea", "FAreaType", "FGeometrySRID", "FGeometry", "FSource", "FVintage", "FPrimaryIdField", "FPrimaryIdValue", "FSecondaryIdField", "FSecondaryIdValue")
 
 
 USA.geocode.output.df<-USA.geocode.output.df[, 
-  apply(geocode.output.df, MARGIN=2, FUN=function(x) {!all(is.na(x))})
+  apply(USA.geocode.output.df, MARGIN=2, FUN=function(x) {!all(is.na(x))})
   ]
 
 
 
 
-contribs.geocoded.df<-merge(contribs.raw.df, USA.geocode.output.df)
+contribs.geocoded.df<-merge(contribs.raw.df, USA.geocode.output.df, all=TRUE)
 
 #contribs.geocoded.df<-geocode.output.df
 
@@ -320,7 +323,7 @@ contribs.geocoded.df$USA.geocoder.address.clean<-paste(
 
 contribs.geocoded.df$USA.geocoder.address.clean<-gsub("No[.] empty[.]remove[.]indicator", "", contribs.geocoded.df$USA.geocoder.address.clean )
 
-contribs.geocoded.df$USA.geocoder.address.clean<-gsub("empty[.]remove[.]indicator", "", contribs.geocoded.df$address.clean )
+contribs.geocoded.df$USA.geocoder.address.clean<-gsub("empty[.]remove[.]indicator", "", contribs.geocoded.df$USA.geocoder.address.clean )
 
 contribs.geocoded.df$USA.geocoder.address.clean<-gsub("( ){2,}", " ",  contribs.geocoded.df$USA.geocoder.address.clean )
 
@@ -345,7 +348,7 @@ for (i in address.cols) {
 contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]<-
   contribs.geocoded.df$FCounty[is.na(contribs.geocoded.df$FCountySubRegion) & is.na(contribs.geocoded.df$FCity)]
 
-contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$cUSA.geocoder.ity.clean) & is.na(contribs.geocoded.df$FCity)]<-
+contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$USA.geocoder.city.clean) & is.na(contribs.geocoded.df$FCity)]<-
   contribs.geocoded.df$FCountySubRegion[is.na(contribs.geocoded.df$USA.geocoder.city.clean) & is.na(contribs.geocoded.df$FCity)]
 
 contribs.geocoded.df$USA.geocoder.city.clean[is.na(contribs.geocoded.df$USA.geocoder.city.clean)]<-
@@ -368,10 +371,10 @@ contribs.geocoded.df$Amount[neg.amounts.v]<-
 
 contribs.geocoded.df$Amount<-as.numeric(contribs.geocoded.df$Amount)
 
-contribs.geocoded.df$Amount[is.na(as.numeric(contribs.geocoded.df$Amount))]
+# contribs.geocoded.df$Amount[is.na(as.numeric(contribs.geocoded.df$Amount))]
 
 contribs.geocoded.df<-merge(contribs.geocoded.df, 
-  contribs.to.geocode.df[, c("geocode.id", "DC.geocoder", "USA.geocoder")], all=TRUE)
+  contribs.to.geocode.df[, !colnames(contribs.to.geocode.df) %in% c("Address", "city", "state", "Zip")], all=TRUE)
 
 contribs.geocoded.df$address.clean<-contribs.geocoded.df$USA.geocoder.address.clean
 contribs.geocoded.df$city.clean<-contribs.geocoded.df$USA.geocoder.city.clean
@@ -387,20 +390,102 @@ contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "zip.clean"]<-
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "city.clean"]<-"Washington"
 contribs.geocoded.df[!contribs.geocoded.df$USA.geocoder, "state.clean"]<-"DC"
 
-
-
-
-# DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX)]
-
+dim(contribs.geocoded.df)[1]==dim(contribs.raw.df)[1]
 
 contribs.df<-contribs.geocoded.df
+
+contribs.df$address.clean[!contribs.df$street.precise & contribs.df$USA.geocoder]<-
+	contribs.df$Address[!contribs.df$street.precise & contribs.df$USA.geocoder]
+
+contribs.df$city.clean[is.na(contribs.df$city.clean)]<-contribs.df$city[is.na(contribs.df$city.clean)]
+contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$state[is.na(contribs.df$state.clean)]
+contribs.df$zip.clean[is.na(contribs.df$zip.clean)]<-contribs.df$Zip[is.na(contribs.df$zip.clean)]
+
+# TO DO: indicator for "unclean" data in "clean" address columns
+
+contribs.df$latitude.consolidated<-NA
+contribs.df$longitude.consolidated<-NA
+
+contribs.df$latitude.consolidated[!contribs.df$USA.geocoder]<-
+  contribs.df$DC.geocoder.LATITUDE[!contribs.df$USA.geocoder]
+contribs.df$longitude.consolidated[!contribs.df$USA.geocoder]<-
+  contribs.df$DC.geocoder.LONGITUDE[!contribs.df$USA.geocoder]
+
+contribs.df$latitude.consolidated[contribs.df$USA.geocoder]<-
+  contribs.df$Latitude[contribs.df$USA.geocoder]
+contribs.df$longitude.consolidated[contribs.df$USA.geocoder]<-
+  contribs.df$Longitude[contribs.df$USA.geocoder]
+
+contribs.df$latitude.consolidated[contribs.df$latitude.consolidated==0]<-NA
+contribs.df$longitude.consolidated[contribs.df$longitude.consolidated==0]<-NA
+
+# output.cols.v<-c("Committee.Name", "Contributor", "Contribution.Type", "Amount", "Date.of.Receipt", "address.clean", "city.clean", "state.clean", "zip.clean", "latitude.consolidated", "longitude.consolidated")
+
+#write.csv(contribs.df[, output.cols.v], file=paste(work.dir, "DC campaign contributions alpha version.csv", sep=""))
+
+#save(contribs.df, file=paste(work.dir, "Geocoded contribs.Rdata", sep=""))
+
+#########################
+#########################
+#########################
+
+
+contribs.df$Contribution.Type[contribs.df$Contribution.Type=="Corp"]<-"Corporation"
+contribs.df$Contribution.Type[contribs.df$Contribution.Type=="Individual "]<-"Individual"
+contribs.df$Contribution.Type[contribs.df$Contribution.Type=="individual"]<-"Individual"
+
+contribs.df$contributor.clean<-contribs.df$Contributor
+
+contribs.df$contributor.clean<-gsub(",( )*,", ",", contribs.df$contributor.clean)
+contribs.df$contributor.clean<-gsub("(^ +)|( +$)", "", contribs.df$contributor.clean)
+
+indiv.sep.ls<-strsplit(contribs.df$contributor.clean, ",")
+
+contribs.df$contributor.first.name<-NA
+contribs.df$contributor.last.name<-NA
+
+contribs.df$contributor.first.name[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[2]})
+
+contribs.df$contributor.last.name[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
+
+contribs.df$contributor.spouse.1<-NA
+contribs.df$contributor.spouse.2<-NA
+
+
+indiv.sep.ls<-strsplit(contribs.df$contributor.first.name, "(&)|( [aA][nN][dD] )")
+
+contribs.df$contributor.spouse.1[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
+
+contribs.df$contributor.spouse.2[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
+
+contribs.df$contributor.first.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.first.name)
+contribs.df$contributor.last.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.last.name)
+contribs.df$contributor.spouse.1<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)
+contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)			
+
+
+
+
+
+
+
+
+#########################
+#########################
+#########################
+
+# DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX)]
 
 # DC.contribs.to.geocode.df[1:720, ][!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX), ]
 
 gsub("[()]", "", "(67878)")
+                     
+#Think about removing: PNumberFractional
 
-                                       
-Think about removing: PNumberFractional
 
 library(lattice)
 
