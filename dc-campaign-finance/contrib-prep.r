@@ -266,15 +266,16 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
 # geocode.output.ls<-geocode.output.ls[1:31441]
 successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
   if(is.data.frame(x)) {
-    ret<-ncol(x)==123
+    ret<-ncol(x)==124
   } else {
     ret<-FALSE
   } 
   ret})
 
+# geocode.output.ls<-lapply(geocode.output.ls, FUN=function(x) { if (is.data.frame(x) && ncol(x)==124) {x[, 1]<-as.character(x[, 1])}; x})
 
-
-geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=123, byrow=TRUE)
+geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=124, byrow=TRUE)
+# geocode.output.mat<-geocode.output.mat[, -2]
 USA.geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
 
 colnames(USA.geocode.output.df)<-c("geocode.id", "Transaction.Id", "API.Version", "Query.Status.Code", "Latitude", "Longitude", "Match.Score", "Match.Type", "Matching.Geography.Type", "Interpolation.Type", "Interpolation.Sub.Type", "Matched.Location.Type", "Feature.Matching.Result.Type", "FeatureMatchingResultCount", "FeatureMatchingResultTypeNotes", "TieHandlingStrategyType", "FeatureMatchingResultTypeTieBreakingNotes", "FeatureMatchingSelectionMethod", "FeatureMatchingSelectionMethodNotes", "Time.Taken", "Census.Year", "Census.Block", "Census.Block.Group", "Census.Tract", "Census.County.Fips", "Census.CBSA.Fips", "Census.CBSA.Micro", "Census.MCD.Fips", "Census.MetDiv.Fips", "Census.MSA.Fips", "Census.Place.Fips", "Census.State.Fips", "MNumber", "MNumberFractional", "MPreDirectional", "MPreQualifier", "MPreType", "MPreArticle", "MName", "MPostArticle", "MPostQualifier", "MSuffix", "MPostDirectional", "MSuiteType", "MSuiteNumber", "MPostOfficeBoxType", "MPostOfficeBoxNumber", "MCity", "MConsolidatedCity", "MMinorCivilDivision", "MCountySubRegion", "MCounty", "MState", "MZip", "MZipPlus1", "MZipPlus2", "MZipPlus3", "MZipPlus4", "MZipPlus5", "PNumber", "PNumberFractional", "PPreDirectional", "PPreQualifier", "PPreType", "PPreArticle", "PName", "PPostArticle", "PPostQualifier", "PSuffix", "PPostDirectional", "PSuiteType", "PSuiteNumber", "PPostOfficeBoxType", "PPostOfficeBoxNumber", "PCity", "PConsolidatedCity", "PMinorCivilDivision", "PCountySubRegion", "PCounty", "PState", "PZip", "PZipPlus1", "PZipPlus2", "PZipPlus3", "PZipPlus4", "PZipPlus5", "FNumber", "FNumberFractional", "FPreDirectional", "FPreQualifier", "FPreType", "FPreArticle", "FName", "FPostArticle", "FPostQualifier", "FSuffix", "FPostDirectional", "FSuiteType", "FSuiteNumber", "FPostOfficeBoxType", "FPostOfficeBoxNumber", "FCity", "FConsolidatedCity", "FMinorCivilDivision", "FCountySubRegion", "FCounty", "FState", "FZip", "FZipPlus1", "FZipPlus2", "FZipPlus3", "FZipPlus4", "FZipPlus5", "FArea", "FAreaType", "FGeometrySRID", "FGeometry", "FSource", "FVintage", "FPrimaryIdField", "FPrimaryIdValue", "FSecondaryIdField", "FSecondaryIdValue")
@@ -394,8 +395,14 @@ dim(contribs.geocoded.df)[1]==dim(contribs.raw.df)[1]
 
 contribs.df<-contribs.geocoded.df
 
+contribs.df$address.is.unclean<-!contribs.df$street.precise & contribs.df$USA.geocoder
+
 contribs.df$address.clean[!contribs.df$street.precise & contribs.df$USA.geocoder]<-
 	contribs.df$Address[!contribs.df$street.precise & contribs.df$USA.geocoder]
+
+contribs.df$city.is.unclean<-is.na(contribs.df$city.clean)
+contribs.df$state.is.unclean<-is.na(contribs.df$state.clean)
+contribs.df$zip.is.unclean<-is.na(contribs.df$zip.clean)
 
 contribs.df$city.clean[is.na(contribs.df$city.clean)]<-contribs.df$city[is.na(contribs.df$city.clean)]
 contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$state[is.na(contribs.df$state.clean)]
@@ -423,7 +430,7 @@ contribs.df$longitude.consolidated[contribs.df$longitude.consolidated==0]<-NA
 
 #write.csv(contribs.df[, output.cols.v], file=paste(work.dir, "DC campaign contributions alpha version.csv", sep=""))
 
-#save(contribs.df, file=paste(work.dir, "Geocoded contribs.Rdata", sep=""))
+#save(contribs.df, file=paste(work.dir, "Geocoded contribs df.Rdata", sep=""))
 
 #########################
 #########################
@@ -468,12 +475,43 @@ contribs.df$contributor.spouse.1<-gsub("(^ +)|( +$)", "", contribs.df$contributo
 contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)			
 
 
+address.dups.v<-duplicated(contribs.df$address.clean) | duplicated(contribs.df$address.clean, fromLast=TRUE) 
+# | duplicated(contribs.df$DC.geocoder.ADDRESS_ID) | duplicated(contribs.df$DC.geocoder.ADDRESS_ID, fromLast=TRUE)
 
+address.dups.v<-unique(contribs.df$address.clean[address.dups.v])
 
+library(compiler)
 
+fix.inconsistent.text <- cmpfun(fix.inconsistent.text)
 
+# address.dups.v<-address.dups.v[1:10]
+Sys.time()
+for ( i in address.dups.v) {
 
+  target.rows<-which(!is.na(contribs.df$address.clean) & contribs.df$address.clean==i)
+  
+  if (length(which(!is.na(contribs.df$contributor.clean[target.rows]) &
+  	!duplicated(contribs.df$contributor.clean[target.rows])))>1) {
+	contribs.df$contributor.clean[target.rows]<-
+	  fix.inconsistent.text(contribs.df$contributor.clean[target.rows])$consistent
+  }
+	
+	if (length(which(!is.na(contribs.df$contributor.last.name[target.rows]) &
+	  !duplicated(contribs.df$contributor.last.name[target.rows])))>1) {
+	contribs.df$contributor.last.name[target.rows]<-
+		fix.inconsistent.text(contribs.df$contributor.last.name[target.rows])$consistent
+	}
+	
+	if (length(which(!is.na(contribs.df$contributor.first.name[target.rows]) &
+  	!duplicated(contribs.df$contributor.first.name[target.rows])))>1) {
+	contribs.df$contributor.first.name[target.rows]<-
+		fix.inconsistent.text(contribs.df$contributor.first.name[target.rows])$consistent
+	}
+	
+	# TO DO: fix inconsistent text in spouses
 
+}
+Sys.time()
 #########################
 #########################
 #########################
