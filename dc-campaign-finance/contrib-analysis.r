@@ -1,12 +1,113 @@
 
 
+
+by.comm.year.agg<-aggregate(contribs.df$Amount[contribs.df$Contribution.Type=="Corporation"],
+	by=list(electoral.office=contribs.df$electoral.office[contribs.df$Contribution.Type=="Corporation"],
+	Committee.Name=contribs.df$Committee.Name[contribs.df$Contribution.Type=="Corporation"],
+	year=substr(contribs.df$Date.of.Receipt[contribs.df$Contribution.Type=="Corporation"], 1, 4)),
+	FUN=sum, na.rm=TRUE)
+
+write.csv(by.comm.year.agg, file=paste(work.dir, "Aggregation by committee and year - corps.csv", sep=""), row.names=FALSE)
+
+
+
+
+# suspected bundling
+# 3 tests:
+# 1. same address
+# 2. within 7 days
+# 3. maximum amount
+
+% of corp contribs that are suspected bundling
+
+contribs.df$contribution.id<-1:nrow(contribs.df)
+
+same.address.combined.v<-c()
+max.contrib.detect.combined.v<-c()
+
+contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
+
+for ( target.committee in unique(contribs.df$Committee.Name)) {
+
+  contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
+  
+  contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$Contribution.Type=="Corporation", ]
+  
+  address.clean.tab<-table(contribs.one.cand.df$address.clean)
+  
+  same.address.v<-names(address.clean.tab)[address.clean.tab>=2]
+  same.address.combined.v<-c( same.address.combined.v, same.address.v)
+  
+  for (target.address in same.address.v) {
+  
+    bundlers.temp.df<-contribs.one.cand.df[contribs.one.cand.df$address.clean==target.address, ]
+    
+    contrib.office<-contribs.one.cand.df$electoral.office[1]
+    
+    if (grepl("(Council Ward)|(School Board President)|(School Board At-Large)|(placeholder)", contrib.office)) {max.legal.contrib<-500}
+    if (grepl("Council At-Large", contrib.office)) {max.legal.contrib<-1000}
+    if (grepl("Council Chairman", contrib.office)) {max.legal.contrib<-1500}
+    if (grepl("(Mayor)|(US Senator)|(US Representative)", contrib.office)) {max.legal.contrib<-2000}
+    if (grepl("(DC Democratic State Committee)|(School Board Ward)|(School Board District)|(National Committee)", contrib.office)) {max.legal.contrib<-300}
+    
+    max.contrib.detect.v<-contribs.one.cand.df$contribution.id[bundlers.temp.df$Amount==max.legal.contrib]
+    
+    max.contrib.detect.combined.v<-c(max.contrib.detect.combined.v, max.contrib.detect.v)
+  }
+  cat(target.committee, "\n")
+}
+
+same.address.combined.v<-unique(same.address.combined.v)
+max.contrib.detect.combined.v<-unique(max.contrib.detect.combined.v)
+
+contribs.df$same.address.shell.flag<-FALSE
+contribs.df$max.contrib.shell.flag<-FALSE
+
+contribs.df$same.address.shell.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
+contribs.df$max.contrib.shell.flag[contribs.df$contribution.id %in% max.contrib.detect.combined.v]<-TRUE
+
+# shp2kml 2.1b:
+
+
+
+
+shp.points.df<-contribs.df
+	
+library(geosphere)
+library(shapefiles)
+
+coords.shp.df<-data.frame(
+	Id=coords.shp.df$Id,
+	X=coords.shp.df$long,
+	Y=coords.shp.df$lat
+)
+
+line.data.df<-line.data.df[, !colnames(line.data.df) == "Id"]
+
+coords.shp.dbf<-cbind(
+	data.frame(Id=1:nrow(coords.df), Item=paste("Item", 1:nrow(coords.df), sep="")),
+	line.data.df)
+
+coords.output.shp <- convert.to.shapefile(coords.shp.df, coords.shp.dbf, "Id", 1)
+
+write.shapefile(coords.output.shp, output.shp.path, arcgis=T)
+
+
+
+
+  same.address.v
+
+# $2,000 for Mayor, Shadow Senator and Shadow Representative 
+# $1,500 for Chairman of the Council 
+# $1,000 for an At-Large Council member 
+# $500 for President of the Board of Education, At-Large Member, Board of Education, or for a Ward Council member
+# $300 for a member of the Board of Education elected from a school district or for an official of a political party
+# $25 for a member of an Advisory Neighborhood Commission 
+
+
 names(DC.geocoded.df)[grepl("[.][0-9]$", names(DC.geocoded.df))]
 
 table(!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS.1))
-
-gyuhui<-
-edit(DC.geocoded.df[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS.1), ])
-
 
 
 

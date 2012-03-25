@@ -512,6 +512,72 @@ for ( i in address.dups.v) {
 
 }
 Sys.time()
+
+
+install.packages("maptools")
+install.packages("splancs")
+install.packages("PBSmapping")
+
+library("maptools")
+library("splancs")
+library("PBSmapping")
+
+ward.shps<-importShapefile(paste(work.dir,"Ward02Ply.shp", sep=""))
+
+
+contribs.event<-contribs.df[!duplicated(contribs.df$geocode.id) & 
+	!is.na(contribs.df$longitude.consolidated), c("geocode.id", "longitude.consolidated", "latitude.consolidated")]
+colnames(contribs.event)<-c("EID", "X", "Y")
+contribs.event$X<-as.numeric(contribs.event$X)
+contribs.event$Y<-as.numeric(contribs.event$Y)
+contribs.event<-as.EventData(contribs.event)
+
+contribs.in.wards<-findPolys(contribs.event, ward.shps)
+
+contribs.matched.ward.df<-data.frame(
+	geocode.id=contribs.in.wards$EID,
+	contributor.ward=attr(ward.shps, "PolyData")$NAME[contribs.in.wards$PID]
+	)
+
+contribs.matched.ward.df$contributor.ward<-as.character(contribs.matched.ward.df$contributor.ward)
+contribs.matched.ward.df$contributor.ward<-
+	gsub("(Ward )|( [(][0-9]*[)])", "", contribs.matched.ward.df$contributor.ward)
+
+contribs.df<-merge(contribs.df, contribs.matched.ward.df, all.x=TRUE)
+
+contribs.df$contributor.ward[is.na(contribs.df$contributor.ward)]<-"Non-DC"
+
+committees.df<-read.delim(paste(work.dir,"DC candidate committees.tsv", sep=""), stringsAsFactors=FALSE)
+
+colnames(committees.df)[colnames(committees.df)=="committee"]<-"Committee.Name"
+colnames(committees.df)[colnames(committees.df)=="office"]<-"electoral.office"
+
+committees.df<-committees.df[!duplicated(committees.df[, c("Committee.Name", "electoral.office")]), ]
+
+contribs.df<-merge(contribs.df, committees.df[, c("Committee.Name", "electoral.office")], all.x=TRUE)
+
+
+contribs.df$recipient.ward<-NA
+
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*1", committees.df$electoral.office)] <-"1"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*2", committees.df$electoral.office)] <-"2"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*3", committees.df$electoral.office)] <-"3"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*4", committees.df$electoral.office)] <-"4"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*5", committees.df$electoral.office)] <-"5"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*6", committees.df$electoral.office)] <-"6"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*7", committees.df$electoral.office)] <-"7"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*8", committees.df$electoral.office)] <-"8"
+
+contribs.df$recipient.ward[is.na(contribs.df$recipient.ward)]<-"Citywide"
+
+contributor.recipient.same.geo<-NA
+
+contributor.recipient.same.geo<-recipient.ward==contributor.ward
+
+contributor.recipient.same.geo[contribs.matched.ward.df$contributor.ward!="Non-DC" &
+	contribs.matched.ward.df$recipient.ward=="Citywide"<-TRUE
+
+
 #########################
 #########################
 #########################
