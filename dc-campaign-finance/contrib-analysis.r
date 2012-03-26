@@ -68,7 +68,44 @@ contribs.df$max.contrib.shell.flag[contribs.df$contribution.id %in% max.contrib.
 
 # shp2kml 2.1b:
 
+shell.contribs.df<-contribs.df[contribs.df$max.contrib.shell.flag, ]
+# perhaps contribs.df$same.address.shell.flag
 
+shell.contribs.temp.df<-data.frame(address.clean=unique(shell.contribs.df$address.clean),
+  shell.address.id=1:length(unique(shell.contribs.df$address.clean)), stringsAsFactors=FALSE)
+
+shell.contribs.df<-merge(shell.contribs.df, shell.contribs.temp.df)
+
+shell.ls<-vector(mode="list", length=length(unique(shell.contribs.df$shell.address.id)))
+
+names(shell.ls)<-unique(shell.contribs.df$shell.address.id)
+
+for ( i in unique(shell.contribs.df$shell.address.id)) {
+	
+  shell.mat<-matrix(t(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
+    c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")]), nrow=1)
+  
+  shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/4), sep=""), 
+    bb=paste("amount", 1:(ncol(shell.mat)/4), sep=""), 
+    cc=paste("date", 1:(ncol(shell.mat)/4), sep=""),
+    dd=paste("committee", 1:(ncol(shell.mat)/4), sep=""), stringsAsFactors=FALSE)
+  
+  shell.mat.df<-as.data.frame(shell.mat, stringsAsFactors=FALSE)
+  
+  names(shell.mat.df)<-c((t(shell.col.names)))
+  
+  shell.mat.df<-cbind(data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
+  	TotalAmount=sum(shell.contribs.df$Amount[shell.contribs.df$shell.address.id==i], na.rm=TRUE),
+  	stringsAsFactors=FALSE),
+  	shell.mat.df)
+  
+  shell.ls[[i]]<-shell.mat.df
+
+}
+
+library(reshape)
+shell.dbf<-do.call(rbind.fill, shell.ls)
+# will want to order by committee
 
 
 shp.points.df<-contribs.df

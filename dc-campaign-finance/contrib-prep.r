@@ -572,10 +572,10 @@ contribs.df$recipient.ward[is.na(contribs.df$recipient.ward)]<-"Citywide"
 
 contributor.recipient.same.geo<-NA
 
-contributor.recipient.same.geo<-recipient.ward==contributor.ward
+contributor.recipient.same.geo<-contribs.df$recipient.ward==contribs.df$contributor.ward
 
 contributor.recipient.same.geo[contribs.matched.ward.df$contributor.ward!="Non-DC" &
-	contribs.matched.ward.df$recipient.ward=="Citywide"<-TRUE
+	contribs.matched.ward.df$recipient.ward=="Citywide"]<-TRUE
 
 
 #########################
