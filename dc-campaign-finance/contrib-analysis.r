@@ -27,6 +27,7 @@ max.contrib.detect.combined.v<-c()
 
 contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
+
 for ( target.committee in unique(contribs.df$Committee.Name)) {
 
   contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
@@ -50,7 +51,7 @@ for ( target.committee in unique(contribs.df$Committee.Name)) {
     if (grepl("(Mayor)|(US Senator)|(US Representative)", contrib.office)) {max.legal.contrib<-2000}
     if (grepl("(DC Democratic State Committee)|(School Board Ward)|(School Board District)|(National Committee)", contrib.office)) {max.legal.contrib<-300}
     
-    max.contrib.detect.v<-contribs.one.cand.df$contribution.id[bundlers.temp.df$Amount==max.legal.contrib]
+    max.contrib.detect.v<-bundlers.temp.df$contribution.id[bundlers.temp.df$Amount==max.legal.contrib]
     
     max.contrib.detect.combined.v<-c(max.contrib.detect.combined.v, max.contrib.detect.v)
   }
@@ -64,7 +65,8 @@ contribs.df$same.address.shell.flag<-FALSE
 contribs.df$max.contrib.shell.flag<-FALSE
 
 contribs.df$same.address.shell.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
-contribs.df$max.contrib.shell.flag[contribs.df$contribution.id %in% max.contrib.detect.combined.v]<-TRUE
+contribs.df$max.contrib.shell.flag[
+  contribs.df$contribution.id %in% max.contrib.detect.combined.v & contribs.df$same.address.shell.flag]<-TRUE
 
 # shp2kml 2.1b:
 
@@ -81,9 +83,18 @@ shell.ls<-vector(mode="list", length=length(unique(shell.contribs.df$shell.addre
 names(shell.ls)<-unique(shell.contribs.df$shell.address.id)
 
 for ( i in unique(shell.contribs.df$shell.address.id)) {
-	
-  shell.mat<-matrix(t(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
-    c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")]), nrow=1)
+  
+  shell.order.tab<-sort(table(shell.contribs.df[shell.contribs.df$shell.address.id==i, "Committee.Name"]), decreasing = TRUE)
+  
+  shell.order.df<-data.frame(Committee.Name=names(shell.order.tab), record.order=1:length(shell.order.tab),
+    stringsAsFactors=FALSE)
+  
+  shell.temp.df<-merge(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
+    c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")], shell.order.df)
+  
+  shell.temp.df<-shell.temp.df[order(shell.temp.df$record.order, -shell.temp.df$Amount), ]
+
+  shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")]), nrow=1)
   
   shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/4), sep=""), 
     bb=paste("amount", 1:(ncol(shell.mat)/4), sep=""), 
@@ -95,6 +106,8 @@ for ( i in unique(shell.contribs.df$shell.address.id)) {
   names(shell.mat.df)<-c((t(shell.col.names)))
   
   shell.mat.df<-cbind(data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
+    lat=shell.contribs.df$latitude.consolidated[shell.contribs.df$shell.address.id==i][1],
+    long=shell.contribs.df$longitude.consolidated[shell.contribs.df$shell.address.id==i][1],
   	TotalAmount=sum(shell.contribs.df$Amount[shell.contribs.df$shell.address.id==i], na.rm=TRUE),
   	stringsAsFactors=FALSE),
   	shell.mat.df)
@@ -107,28 +120,20 @@ library(reshape)
 shell.dbf<-do.call(rbind.fill, shell.ls)
 # will want to order by committee
 
+shell.dbf<-cbind(data.frame(Id=1:nrow(shell.dbf)), shell.dbf)
 
-shp.points.df<-contribs.df
-	
 library(geosphere)
 library(shapefiles)
 
-coords.shp.df<-data.frame(
-	Id=coords.shp.df$Id,
-	X=coords.shp.df$long,
-	Y=coords.shp.df$lat
+shell.shp.df<-data.frame(
+	Id=shell.dbf$Id,
+	X=as.numeric(shell.dbf$long),
+	Y=as.numeric(shell.dbf$lat)
 )
 
-line.data.df<-line.data.df[, !colnames(line.data.df) == "Id"]
+shell.output.shp <- convert.to.shapefile(shell.shp.df, shell.dbf, "Id", 1)
 
-coords.shp.dbf<-cbind(
-	data.frame(Id=1:nrow(coords.df), Item=paste("Item", 1:nrow(coords.df), sep="")),
-	line.data.df)
-
-coords.output.shp <- convert.to.shapefile(coords.shp.df, coords.shp.dbf, "Id", 1)
-
-write.shapefile(coords.output.shp, output.shp.path, arcgis=T)
-
+write.shapefile(shell.output.shp, paste(work.dir, "shell points test"), arcgis=T)
 
 
 
