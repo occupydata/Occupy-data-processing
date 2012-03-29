@@ -24,6 +24,7 @@ contribs.df$contribution.id<-1:nrow(contribs.df)
 
 same.address.combined.v<-c()
 max.contrib.detect.combined.v<-c()
+contrib.timing.detect.combined.v<-c()
 
 contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
@@ -54,23 +55,44 @@ for ( target.committee in unique(contribs.df$Committee.Name)) {
     max.contrib.detect.v<-bundlers.temp.df$contribution.id[bundlers.temp.df$Amount==max.legal.contrib]
     
     max.contrib.detect.combined.v<-c(max.contrib.detect.combined.v, max.contrib.detect.v)
+    
+    
+    contrib.timing.mat<-matrix(bundlers.temp.df$Date.of.Receipt)
+    rownames(contrib.timing.mat)<-bundlers.temp.df$contribution.id
+    contrib.timing.mat<-dist(contrib.timing.mat)
+    contrib.timing.mat<-as.matrix(contrib.timing.mat)<=7
+    contrib.timing.mat[upper.tri(contrib.timing.mat, diag = TRUE)]<-FALSE
+    # could also use diag(test.mat)<-FALSE
+    contrib.timing.v<-apply(contrib.timing.mat, MARGIN=2, FUN=any)
+    
+    contrib.timing.detect.combined.v<-
+      c(contrib.timing.detect.combined.v, colnames(contrib.timing.mat)[contrib.timing.v])
+    
+    
   }
   cat(target.committee, "\n")
 }
 
 same.address.combined.v<-unique(same.address.combined.v)
 max.contrib.detect.combined.v<-unique(max.contrib.detect.combined.v)
+contrib.timing.detect.combined.v<-unique(contrib.timing.detect.combined.v)
 
 contribs.df$same.address.shell.flag<-FALSE
 contribs.df$max.contrib.shell.flag<-FALSE
+contribs.df$contrib.timing.shell.flag<-FALSE
 
 contribs.df$same.address.shell.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
 contribs.df$max.contrib.shell.flag[
   contribs.df$contribution.id %in% max.contrib.detect.combined.v & contribs.df$same.address.shell.flag]<-TRUE
 
+contribs.df$contrib.timing.shell.flag[
+	contribs.df$contribution.id %in% contrib.timing.detect.combined.v &
+	contribs.df$same.address.shell.flag &
+	contribs.df$max.contrib.shell.flag]<-TRUE
+
 # shp2kml 2.1b:
 
-shell.contribs.df<-contribs.df[contribs.df$max.contrib.shell.flag, ]
+shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag, ]
 # perhaps contribs.df$same.address.shell.flag
 
 shell.contribs.temp.df<-data.frame(address.clean=unique(shell.contribs.df$address.clean),
@@ -105,7 +127,8 @@ for ( i in unique(shell.contribs.df$shell.address.id)) {
   
   names(shell.mat.df)<-c((t(shell.col.names)))
   
-  shell.mat.df<-cbind(data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
+  shell.mat.df<-cbind(
+    data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
     lat=shell.contribs.df$latitude.consolidated[shell.contribs.df$shell.address.id==i][1],
     long=shell.contribs.df$longitude.consolidated[shell.contribs.df$shell.address.id==i][1],
   	TotalAmount=sum(shell.contribs.df$Amount[shell.contribs.df$shell.address.id==i], na.rm=TRUE),
@@ -138,7 +161,7 @@ write.shapefile(shell.output.shp, paste(work.dir, "shell points test"), arcgis=T
 
 
   same.address.v
-
+# http://ocf.dc.gov/intop/opinions/op_96_12.shtm
 # $2,000 for Mayor, Shadow Senator and Shadow Representative 
 # $1,500 for Chairman of the Council 
 # $1,000 for an At-Large Council member 

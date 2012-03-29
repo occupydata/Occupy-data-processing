@@ -547,12 +547,52 @@ contribs.df<-merge(contribs.df, contribs.matched.ward.df, all.x=TRUE)
 
 contribs.df$contributor.ward[is.na(contribs.df$contributor.ward)]<-"Non-DC"
 
+
+
 committees.df<-read.delim(paste(work.dir,"DC candidate committees.tsv", sep=""), stringsAsFactors=FALSE)
 
 colnames(committees.df)[colnames(committees.df)=="committee"]<-"Committee.Name"
 colnames(committees.df)[colnames(committees.df)=="office"]<-"electoral.office"
 
-committees.df<-committees.df[!duplicated(committees.df[, c("Committee.Name", "electoral.office")]), ]
+committees.df[committees.df$Committee.Name=="Committee to Elect Cardell Shelton", ]
+
+committees.same.name.df<-committees.df[duplicated(committees.df$Committee.Name) | duplicated(committees.df$Committee.Name, fromLast=TRUE),]
+
+committees.same.name.df<-committees.same.name.df[!duplicated(committees.same.name.df[, c("Committee.Name", "year")], fromLast=TRUE) & 
+  !duplicated(committees.same.name.df[, c("Committee.Name", "year")]), ]
+
+contribs.save.df<-contribs.df
+
+for ( i in 1:nrow(committees.same.name.df)) {
+	
+	targ.yr<-committees.same.name.df$year[i]
+	
+	if (committees.same.name.df$Committee.Name[i]!="Friends of Calvin Gurley") {
+	  targ.yr.set<-c(targ.yr-1, targ.yr)
+	} else {
+	  targ.yr.set<-targ.yr
+	}
+
+  contribs.df$Committee.Name[
+    substr(contribs.df$Date.of.Receipt, 1, 4) %in% targ.yr.set &
+    contribs.df$Committee.Name==committees.same.name.df$Committee.Name[i]
+    ] <- paste(committees.same.name.df$Committee.Name[i], " [", targ.yr, "]", sep="")
+
+}
+
+# unique(contribs.df$Committee.Name)[grepl("[[]", unique(contribs.df$Committee.Name))]
+
+committees.df<-committees.df[!committees.df$Committee.Name %in% committees.same.name.df$Committee.Name, ]
+
+committees.same.name.df$Committee.Name<-paste(committees.same.name.df$Committee.Name,
+  " [", committees.same.name.df$year, "]", sep="")
+
+committees.df<-rbind(committees.df, committees.same.name.df)
+
+
+#committees.df<-committees.df[!duplicated(committees.df[, c("Committee.Name", "electoral.office")]), ]
+
+committees.df<-committees.df[!duplicated(committees.df$Committee.Name), ]
 
 contribs.df<-merge(contribs.df, committees.df[, c("Committee.Name", "electoral.office")], all.x=TRUE)
 
@@ -570,13 +610,15 @@ contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*8", committees.df$electoral
 
 contribs.df$recipient.ward[is.na(contribs.df$recipient.ward)]<-"Citywide"
 
-contributor.recipient.same.geo<-NA
+contribs.df$contributor.recipient.same.geo<-NA
 
-contributor.recipient.same.geo<-contribs.df$recipient.ward==contribs.df$contributor.ward
+contribs.df$contributor.recipient.same.geo<-contribs.df$recipient.ward==contribs.df$contributor.ward
 
-contributor.recipient.same.geo[contribs.matched.ward.df$contributor.ward!="Non-DC" &
+contribs.df$contributor.recipient.same.geo[contribs.matched.ward.df$contributor.ward!="Non-DC" &
 	contribs.matched.ward.df$recipient.ward=="Citywide"]<-TRUE
 
+### This point is where it is saved
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df.Rdata", sep=""))
 
 #########################
 #########################
