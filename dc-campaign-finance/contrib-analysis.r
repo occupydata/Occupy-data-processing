@@ -29,6 +29,8 @@ contrib.timing.detect.combined.v<-c()
 contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
 
+
+
 for ( target.committee in unique(contribs.df$Committee.Name)) {
 
   contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
@@ -56,18 +58,21 @@ for ( target.committee in unique(contribs.df$Committee.Name)) {
     
     max.contrib.detect.combined.v<-c(max.contrib.detect.combined.v, max.contrib.detect.v)
     
+    if (sum(bundlers.temp.df$contribution.id %in% max.contrib.detect.v)>=2) {
     
-    contrib.timing.mat<-matrix(bundlers.temp.df$Date.of.Receipt)
-    rownames(contrib.timing.mat)<-bundlers.temp.df$contribution.id
-    contrib.timing.mat<-dist(contrib.timing.mat)
-    contrib.timing.mat<-as.matrix(contrib.timing.mat)<=7
-    contrib.timing.mat[upper.tri(contrib.timing.mat, diag = TRUE)]<-FALSE
-    # could also use diag(test.mat)<-FALSE
-    contrib.timing.v<-apply(contrib.timing.mat, MARGIN=2, FUN=any)
+      contrib.timing.mat<-matrix(bundlers.temp.df$Date.of.Receipt[
+      	bundlers.temp.df$contribution.id %in% max.contrib.detect.v])
+      rownames(contrib.timing.mat)<-bundlers.temp.df$contribution.id[
+      	bundlers.temp.df$contribution.id %in% max.contrib.detect.v]
+      contrib.timing.mat<-dist(contrib.timing.mat)
+      contrib.timing.mat<-as.matrix(contrib.timing.mat)<=7
+      # contrib.timing.mat[upper.tri(contrib.timing.mat, diag = TRUE)]<-FALSE
+      diag(contrib.timing.mat)<-FALSE
+      contrib.timing.v<-apply(contrib.timing.mat, MARGIN=2, FUN=any)
     
-    contrib.timing.detect.combined.v<-
-      c(contrib.timing.detect.combined.v, colnames(contrib.timing.mat)[contrib.timing.v])
-    
+      contrib.timing.detect.combined.v<-
+        c(contrib.timing.detect.combined.v, colnames(contrib.timing.mat)[contrib.timing.v])
+    }
     
   }
   cat(target.committee, "\n")
@@ -103,6 +108,9 @@ shell.contribs.df<-merge(shell.contribs.df, shell.contribs.temp.df)
 shell.ls<-vector(mode="list", length=length(unique(shell.contribs.df$shell.address.id)))
 
 names(shell.ls)<-unique(shell.contribs.df$shell.address.id)
+
+i<-unique(shell.contribs.df$shell.address.id)[1]
+i<-1
 
 for ( i in unique(shell.contribs.df$shell.address.id)) {
   
