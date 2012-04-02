@@ -1,3 +1,25 @@
+# Copyright (c) 2012 Data Committee of Occupy DC
+# 	
+# Permission is hereby granted, free of charge, to any person obtaining a copy of 
+# this software and associated documentation files (the "Software"), to deal in 
+# the Software without restriction, including without limitation the rights to 
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+# of the Software, and to permit persons to whom the Software is furnished to do 
+# so, subject to the following conditions:
+# 	
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Contact: data at occupydc dot org
+
 
 library(stringr)
 
@@ -143,40 +165,102 @@ vote.record.no.dups.df<-vote.record.df[!duplicated(vote.record.df), ]
 
 
 
-target.roll.call<-"00200"
-target.roll.call<-"00020"
-target.roll.call<-"00130"
 
-download.file(url=paste("http://www.mass.gov/legis/journal/RollCallPdfs/187/", 
-							target.roll.call, ".pdf", sep=""),
-							destfile=paste(work.dir, "temp.pdf", sep=""))
+####################################
+####################################
+####################################
 
-system(paste("pdftotext -layout ", paste(work.dir, "temp.pdf", sep="")))
+library(stringr)
 
-roll.call.txt<-readLines(paste(work.dir, "temp.txt", sep=""))
+house.votes.df<-data.frame(reps="", vote="", roll.call="", stringsAsFactors=FALSE)[FALSE, ]
+
+all.roll.call.nums<-sprintf("%05d", 1:211)
+
+roll.call.urls<-paste("http://www.mass.gov/legis/journal/RollCallPdfs/187/", 
+  all.roll.call.nums, ".pdf", sep="")
+
+
+# target.roll.call<-"00200"
+# target.roll.call<-"00020"
+# target.roll.call<-"00130"
+
+for (target.url in roll.call.urls) {
+
+	cat(target.url, "\n")
+
+download.file(url=target.url, destfile=paste(work.dir, "temp.pdf", sep=""))
+
+system(paste("pdftotext -layout ", paste("\"", work.dir, "temp.pdf\"", sep="")))
+
+roll.call.txt<-readLines(paste( work.dir, "temp.txt", sep=""))
 
 if (length(roll.call.txt)<40) {
 
   system(paste("convert -depth 8 -density 400 -units PixelsPerInch -type Grayscale +compress", 
-  	paste(work.dir, "temp.pdf", sep=""),
-    paste(work.dir, "temp.tif", sep="")))
+    paste("\"", work.dir, "temp.pdf\"", sep=""),
+    paste("\"", work.dir, "temp.tif\"", sep="")))
 
-  system(paste("tesseract ", work.dir, "temp.tif ", work.dir, "temp -l eng -psm 6", sep=""))
+  system(paste("tesseract ", "\"", work.dir, "temp.tif\" ", "\"", work.dir, "temp\" -l eng -psm 6", sep=""))
   
   roll.call.txt<-readLines(paste(work.dir, "temp.txt", sep=""))
 
 }
 
-roll.call.txt
+#roll.call.txt
 
-House, No. 3535
+#House, No. 3535
 
-for 
+start.block<-min(which(3<=sapply(str_extract_all(roll.call.txt, 
+  "(^Y )|( Y )|(^N )|( N )|(^X )|( X )|(^P )|( P )"), FUN=length)))
 
-str_extract_all(
+end.block<-max(which(grepl("(^Y )|( Y )|(^N )|( N )|(^X )|( X )|(^P )|( P )", roll.call.txt) &
+  !grepl("(YEA)|(NAY)|(N-V)|(PRESENT)|(NOT VOTING)|(AFTER VOTE)", roll.call.txt)))
 
-strsplit(roll.call.txt[20], "(^Y )|( Y )|(^N )|( N )|(^X )|( X )|(^P )|( P )")
 
+
+block.votes.df<-data.frame(reps="", vote="", roll.call="", stringsAsFactors=FALSE)[FALSE, ]
+
+target.session<-"187"
+
+bill.num<-"test"
+
+
+for (i in start.block:end.block) {
+	
+	reps.to.add<-strsplit(roll.call.txt[i], "(^Y )|( Y )|(^N )|( N )|(^X )|( X )|(^P )|( P )")[[1]]
+	reps.to.add<-reps.to.add[grepl("[[:alpha:]]", reps.to.add)]
+
+  block.temp.df<-data.frame(reps=reps.to.add,
+    vote=str_extract_all(roll.call.txt[i], "(^Y )|( Y )|(^N )|( N )|(^X )|( X )|(^P )|( P )")[[1]], 
+    stringsAsFactors=FALSE)
+  
+	block.votes.df<-rbind(block.votes.df, block.temp.df)
+
+}
+
+vote.name<-paste("s", target.session, ".b", bill.num, ".r", 
+  str_extract_all(target.url, "[0-9]{5}")[[1]], sep="")
+
+block.votes.df$roll.call<-vote.name
+
+house.votes.df<-rbind(house.votes.df, block.votes.df)
+
+}
+
+# Problem at http://www.mass.gov/legis/journal/RollCallPdfs/187/00182.pdf
+
+
+
+
+
+
+
+
+  stest.b2163.r160
+
+49] "YEAs= 122 NAYs= 34"                                                   
+[50] "N-V: 3"                                                               
+[51] "P=PRESENT X=NOT VOTING *=AFTER VOTE"  
 
 600
 
