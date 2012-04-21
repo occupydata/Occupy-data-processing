@@ -26,9 +26,15 @@
 # 2. within 7 days
 # 3. maximum amount
 
-% of corp contribs that are suspected bundling
+#% of corp contribs that are suspected bundling
+
+library("stringr")
 
 contribs.df$contribution.id<-1:nrow(contribs.df)
+
+contribs.df$same.address.shell.flag<-FALSE
+contribs.df$max.contrib.shell.flag<-FALSE
+contribs.df$contrib.timing.shell.flag<-FALSE
 
 same.address.combined.v<-c()
 max.contrib.detect.combined.v<-c()
@@ -120,7 +126,7 @@ for (target.races in map.races) {
 		
 		contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
 		
-		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$Contribution.Type=="Corporation", ]
+		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$Contribution.Type %in% c("Business", "Corporation"), ]
 		
 		address.clean.tab<-table(contribs.one.cand.df$address.clean)
 		
@@ -166,10 +172,6 @@ for (target.races in map.races) {
 	same.address.combined.v<-unique(same.address.combined.v)
 	max.contrib.detect.combined.v<-unique(max.contrib.detect.combined.v)
 	contrib.timing.detect.combined.v<-unique(contrib.timing.detect.combined.v)
-	
-	contribs.df$same.address.shell.flag<-FALSE
-	contribs.df$max.contrib.shell.flag<-FALSE
-	contribs.df$contrib.timing.shell.flag<-FALSE
 	
 	contribs.df$same.address.shell.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
 	contribs.df$max.contrib.shell.flag[
@@ -254,12 +256,18 @@ for (target.races in map.races) {
 	
 	shell.output.shp <- convert.to.shapefile(shell.shp.df, shell.dbf, "Id", 1)
 	
-	write.shapefile(shell.output.shp, paste(work.dir, "shell points time criteria ", target.races), arcgis=T)
+	write.shapefile(shell.output.shp, paste(work.dir, "shell points time criteria ", target.races, sep=""), arcgis=T)
 	
-	write.csv(shell.dbf, file=paste(work.dir, "shell points time criteria ", target.races, ".csv"), row.names=FALSE)
+	write.csv(shell.dbf, file=paste(work.dir, "shell points time criteria ", target.races, ".csv", sep=""), row.names=FALSE)
 	
 }
 
+
+write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file.csv", sep=""),  row.names=FALSE )
+
+
+
+# sudo port install php5-curl
 
 
 

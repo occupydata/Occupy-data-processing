@@ -641,11 +641,12 @@ contribs.df$contributor.recipient.same.geo<-NA
 
 contribs.df$contributor.recipient.same.geo<-contribs.df$recipient.ward==contribs.df$contributor.ward
 
-contribs.df$contributor.recipient.same.geo[contribs.matched.ward.df$contributor.ward!="Non-DC" &
-	contribs.matched.ward.df$recipient.ward=="Citywide"]<-TRUE
+contribs.df$contributor.recipient.same.geo[contribs.df$contributor.ward!="Non-DC" &
+	contribs.df$recipient.ward=="Citywide"]<-TRUE
 
 ### This point is where it is saved
 # save(contribs.df, file=paste(work.dir, "Geocoded contribs df.Rdata", sep=""))
+# save(committees.df, file=paste(work.dir, "committees finished df.Rdata", sep=""))
 
 #########################
 #########################

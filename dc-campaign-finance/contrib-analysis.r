@@ -30,6 +30,19 @@ write.csv(by.comm.year.agg, file=paste(work.dir, "Aggregation by committee and y
 
 
 
+table(contribs.df$contributor.recipient.same.geo[contribs.df$Contribution.Type=="Corporation"])
+
+
+aggregate(contribs.df$Amount[contribs.df$Contribution.Type %in% c("Corporation", "Business")],
+  by=list(contribs.df$contributor.recipient.same.geo[contribs.df$Contribution.Type %in% c("Corporation", "Business")],
+    contribs.df$recipient.ward[contribs.df$Contribution.Type %in% c("Corporation", "Business")]),
+  FUN=sum)
+
+aggregate(contribs.df$Amount[contribs.df$Contribution.Type=="Individual"],
+  by=list(contribs.df$contributor.recipient.same.geo[contribs.df$Contribution.Type=="Individual"],
+    contribs.df$recipient.ward[contribs.df$Contribution.Type=="Individual"]),
+  FUN=sum)
+
 
 names(DC.geocoded.df)[grepl("[.][0-9]$", names(DC.geocoded.df))]
 
