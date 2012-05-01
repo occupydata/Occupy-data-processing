@@ -46,6 +46,7 @@ contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
 
 map.races<-c(
+	"All All Years",
 	"All 2012",
 	"All 2010",
 	"All 2008",
@@ -87,7 +88,7 @@ map.races<-c(
 
 all.committees<-unique(contribs.df$Committee.Name)
 
-target.races<-map.races[20]
+target.races<-map.races[3]
 
 for (target.races in map.races) {
 	
@@ -117,6 +118,14 @@ for (target.races in map.races) {
 		target.committees<-all.committees[all.committees %in% comm.temp]
 		
 	}
+	
+	if (target.races=="All All Years") {
+	  
+		comm.temp<-committees.df$Committee.Name
+		target.committees<-all.committees
+		
+	}
+	
 	
 	same.address.combined.v<-c()
 	max.contrib.detect.combined.v<-c()
@@ -184,7 +193,8 @@ for (target.races in map.races) {
 	
 	# shp2kml 2.1b:
 	
-	shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag, ]
+	shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
+	  contribs.df$Committee.Name %in% comm.temp, ]
 	# perhaps contribs.df$same.address.shell.flag
 	
 	if(nrow(shell.contribs.df)==0) {
@@ -214,18 +224,25 @@ for (target.races in map.races) {
 		shell.temp.df<-merge(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
 																					 c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")], shell.order.df)
 		
-		shell.temp.df<-shell.temp.df[order(shell.temp.df$record.order, -shell.temp.df$Amount), ]
+		shell.temp.df<-shell.temp.df[order(shell.temp.df$record.order, shell.temp.df$Date.of.Receipt, -shell.temp.df$Amount), ]
 		
-		shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")]), nrow=1)
+		shell.temp.df$temporal.relation<-
+			c(7<shell.temp.df$Date.of.Receipt[-1]-shell.temp.df$Date.of.Receipt[-nrow(shell.temp.df)], FALSE)
 		
-		shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/4), sep=""), 
-																bb=paste("amount", 1:(ncol(shell.mat)/4), sep=""), 
-																cc=paste("date", 1:(ncol(shell.mat)/4), sep=""),
-																dd=paste("committee", 1:(ncol(shell.mat)/4), sep=""), stringsAsFactors=FALSE)
+		shell.temp.df$temporal.relation[!shell.temp.df$temporal.relation]<-""
+		
+		shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name", "temporal.relation")]), nrow=1)
+		
+		shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/5), sep=""), 
+																bb=paste("amount", 1:(ncol(shell.mat)/5), sep=""), 
+																cc=paste("date", 1:(ncol(shell.mat)/5), sep=""),
+																dd=paste("committee", 1:(ncol(shell.mat)/5), sep=""), 
+																ee=paste("space", 1:(ncol(shell.mat)/5), sep=""),
+																stringsAsFactors=FALSE)
 		
 		shell.mat.df<-as.data.frame(shell.mat, stringsAsFactors=FALSE)
 		
-		names(shell.mat.df)<-c((t(shell.col.names)))
+		names(shell.mat.df)<-c(t(shell.col.names))
 		
 		shell.mat.df<-cbind(
 			data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
@@ -242,6 +259,27 @@ for (target.races in map.races) {
 	library(reshape)
 	shell.dbf<-do.call(rbind.fill, shell.ls)
 	# will want to order by committee
+	
+	
+	shell.dbf<-shell.dbf[order(shell.dbf$TotalAmount, decreasing=TRUE), ]
+	
+	shell.dbf$rankCat<-5
+	
+	if (nrow(shell.dbf)>=10) {
+		shell.dbf$rankCat[1:10]<-1
+	}
+	
+	if (nrow(shell.dbf)>=20) {
+		shell.dbf$rankCat[11:20]<-2
+	}
+	
+	if (nrow(shell.dbf)>=60) {
+		shell.dbf$rankCat[21:60]<-3
+	}
+	
+	if (nrow(shell.dbf)>=140) {
+		shell.dbf$rankCat[61:140]<-4
+	}
 	
 	shell.dbf<-cbind(data.frame(Id=1:nrow(shell.dbf)), shell.dbf)
 	
@@ -263,7 +301,7 @@ for (target.races in map.races) {
 }
 
 
-write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file.csv", sep=""),  row.names=FALSE )
+write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )
 
 
 

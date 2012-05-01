@@ -27,6 +27,9 @@
 work.dir<-""
 # Put your working directory here
 
+code.dir<-""
+# Put your code directory here. (i.e. where is this file?)
+
 download.file(
   "http://commondatastorage.googleapis.com/ckannet-storage/2012-02-16T040627/DC_campaign_contribs_99_part12.zip",
   paste(work.dir, "DC_campaign_contribs_99_part12.zip", sep="")
@@ -64,6 +67,28 @@ for ( i in 1:ncol(contribs.to.geocode.df)) {
   contribs.to.geocode.df[, i]<-gsub("\t", " ", contribs.to.geocode.df[, i])
 
 }
+
+
+
+
+
+cat("autoid\tAddr", paste(1:nrow(contribs.to.geocode.df), "\t", gsub(",", " ", contribs.to.geocode.df$Address), " ", contribs.to.geocode.df$city, ", ", contribs.to.geocode.df$state, " ", contribs.to.geocode.df$Zip, sep=""), file=paste(work.dir, "raw/temp perl input.txt", sep=""), sep="\n")
+
+system(paste("perl ", "\"", code.dir, "parseAddr.pl\" ","\"", work.dir, "raw/temp perl input.txt\" \"", work.dir, "raw/temp perl output.txt\" tab", sep=""), ignore.stdout = TRUE, ignore.stderr = TRUE)
+
+perl.parsed.df<-read.table(paste(work.dir, "raw/temp perl output.txt", sep=""), sep="\t", quote="", header=TRUE, comment.char = "", stringsAsFactors=FALSE)
+
+
+perl.parsed.df$perl_parsed_combined_no_city<-
+  paste(perl.parsed.df$perl_parsed_number, perl.parsed.df$perl_parsed_prefix, perl.parsed.df$perl_parsed_street, perl.parsed.df$perl_parsed_type, perl.parsed.df$perl_parsed_suffix)
+
+perl.parsed.df$perl_parsed_combined_no_city<-gsub(" {2,}", " ", perl.parsed.df$perl_parsed_combined_no_city)
+perl.parsed.df$perl_parsed_combined_no_city<-gsub("(^ ))|( $)", "", perl.parsed.df$perl_parsed_combined_no_city)
+
+
+contribs.to.geocode.df<-cbind(contribs.to.geocode.df, perl.parsed.df[, colnames(perl.parsed.df) %in% c("autoid", "Addr") ])
+
+
 
 
 URLencode.vec <- Vectorize(URLencode)
@@ -215,9 +240,11 @@ USA.contribs.to.geocode.df<-contribs.to.geocode.df[contribs.to.geocode.df$USA.ge
 geocode.output.ls<-vector("list", length=nrow(USA.contribs.to.geocode.df))
 
 
+
+
 USA.contribs.to.geocode.df$api.url<-paste(
   "http://webgis.usc.edu/Services/Geocode/WebService/GeocoderWebServiceHttpNonParsedAdvanced_V02_96.aspx?streetAddress=",
-  URLencode.vec(USA.contribs.to.geocode.df$Address, reserved = TRUE),
+  URLencode.vec(USA.contribs.to.geocode.df$perl_parsed_combined_no_city, reserved = TRUE),
   "&city=",
   URLencode.vec(USA.contribs.to.geocode.df$city, reserved = TRUE),
   "&state=",
@@ -421,14 +448,14 @@ contribs.df<-contribs.geocoded.df
 contribs.df$address.is.unclean<-!contribs.df$street.precise & contribs.df$USA.geocoder
 
 contribs.df$address.clean[!contribs.df$street.precise & contribs.df$USA.geocoder]<-
-	contribs.df$Address[!contribs.df$street.precise & contribs.df$USA.geocoder]
+	contribs.df$perl_parsed_combined_no_city[!contribs.df$street.precise & contribs.df$USA.geocoder]
 
 contribs.df$city.is.unclean<-is.na(contribs.df$city.clean)
 contribs.df$state.is.unclean<-is.na(contribs.df$state.clean)
 contribs.df$zip.is.unclean<-is.na(contribs.df$zip.clean)
 
 contribs.df$city.clean[is.na(contribs.df$city.clean)]<-contribs.df$city[is.na(contribs.df$city.clean)]
-contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$state[is.na(contribs.df$state.clean)]
+contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$perl_parsed_state[is.na(contribs.df$state.clean)]
 contribs.df$zip.clean[is.na(contribs.df$zip.clean)]<-contribs.df$Zip[is.na(contribs.df$zip.clean)]
 
 # TO DO: indicator for "unclean" data in "clean" address columns
@@ -647,6 +674,109 @@ contribs.df$contributor.recipient.same.geo[contribs.df$contributor.ward!="Non-DC
 ### This point is where it is saved
 # save(contribs.df, file=paste(work.dir, "Geocoded contribs df.Rdata", sep=""))
 # save(committees.df, file=paste(work.dir, "committees finished df.Rdata", sep=""))
+
+
+install.packages("foreign")
+
+library(foreign)
+
+download.file("http://dcatlas.dcgis.dc.gov/download/CamaCommPt.ZIP", 
+							paste(work.dir, "raw/CamaCommPt.ZIP", sep="") )
+# See http://data.dc.gov/Metadata.aspx?id=144
+
+unzip( paste(work.dir, "raw/CamaCommPt.ZIP", sep=""), exdir=paste(work.dir, "raw/", sep="") )
+
+cama.comm.df<-read.dbf(paste(work.dir, "raw/CamaCommPt.dbf", sep=""), as.is=TRUE)
+cama.comm.df$database_source<-"Comm"
+
+
+download.file("http://dcatlas.dcgis.dc.gov/download/CamaResPt.ZIP", 
+							paste(work.dir, "raw/CamaResPt.ZIP", sep="") )
+# See http://data.dc.gov/Metadata.aspx?id=42
+
+unzip( paste(work.dir, "raw/CamaResPt.ZIP", sep=""), exdir=paste(work.dir, "raw/", sep="") )
+
+cama.res.df<-read.dbf(paste(work.dir, "raw/CamaResPt.dbf", sep=""), as.is=TRUE)
+cama.res.df$database_source<-"Res"
+
+
+download.file("http://dcatlas.dcgis.dc.gov/download/CamaCondoPt.ZIP", 
+							paste(work.dir, "raw/CamaCondoPt.ZIP", sep="") )
+# See http://data.dc.gov/Metadata.aspx?id=41
+
+unzip( paste(work.dir, "raw/CamaCondoPt.ZIP", sep=""), exdir=paste(work.dir, "raw/", sep="") )
+
+cama.condo.df<-read.dbf(paste(work.dir, "raw/CamaCondoPt.dbf", sep=""), as.is=TRUE)
+cama.condo.df$database_source<-"Condo"
+
+cama.df<-rbind.fill(cama.comm.df, cama.res.df)
+
+cama.df<-rbind.fill(cama.df, cama.condo.df)
+
+rm(cama.condo.df)
+rm(cama.res.df)
+rm(cama.comm.df)
+
+cama.df$NUM_UNITS<-as.numeric(cama.df$NUM_UNITS)
+
+
+cama.dups.df<-cama.df[duplicated(cama.df$SSL, fromLast=TRUE) | duplicated(cama.df$SSL), ] 
+
+cama.dups.ls<-vector(mode = "list", length = length(unique(cama.dups.df$SSL)) )
+
+names(cama.dups.ls)<-unique(cama.dups.df$SSL)
+
+for (target.ssl in unique(cama.dups.df$SSL)) {
+	
+	cama.dups.temp.df<-cama.dups.df[cama.dups.df$SSL==target.ssl, ]
+	
+	num.units.temp<-cama.dups.temp.df$NUM_UNITS
+	
+	num.units.temp[is.na(num.units.temp)]<-0
+	
+	if (any(num.units.temp==0) & any(num.units.temp==1)) {
+		num.units.temp<-1
+	}
+	
+	if (any(num.units.temp>1) ) {
+		num.units.temp<-sum(num.units.temp)
+	}
+	
+	cama.dups.temp.df$NUM_UNITS<-num.units.temp	
+	
+	for ( i in 1:ncol(cama.dups.temp.df)) {
+		
+		if (!all( duplicated(cama.dups.temp.df[, i], fromLast=TRUE) | duplicated(cama.dups.temp.df[, i]) )) {
+			cama.dups.temp.df[, i]<-"<MULTIPLE VALUES--SEE CAMA FILE>"
+		}
+		
+	}
+	
+	cama.dups.ls[[target.ssl]]<-cama.dups.temp.df[1, ]
+	
+	cat(target.ssl, "\n")
+	
+} 
+
+
+cama.df<-cama.df[!cama.df$SSL %in% unique(cama.dups.df$SSL), ]
+
+cama.dups.finished.df<-do.call(rbind, cama.dups.ls)
+
+cama.df<-rbind(cama.df, cama.dups.finished.df)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #########################
 #########################
