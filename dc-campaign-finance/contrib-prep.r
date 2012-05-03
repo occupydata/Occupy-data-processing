@@ -31,7 +31,7 @@ code.dir<-""
 # Put your code directory here. (i.e. where is this file?)
 
 download.file(
-  "http://commondatastorage.googleapis.com/ckannet-storage/2012-02-16T040627/DC_campaign_contribs_99_part12.zip",
+  "http://commondatastorage.googleapis.com/ckannet-storage/2012-05-01T132354/DC_campaign_contribs_99_part12.zip",
   paste(work.dir, "DC_campaign_contribs_99_part12.zip", sep="")
   )
   
@@ -51,7 +51,7 @@ for ( targ.file in files.to.stack[-1] ) {
 
 }
 
-
+contribs.raw.df$contribution.id<-1:nrow(contribs.raw.df)
 
 
 contribs.to.geocode.df<-contribs.raw.df[!duplicated(contribs.raw.df[, c("Address", "city", "state", "Zip")]), 

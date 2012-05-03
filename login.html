@@ -1,0 +1,1472 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta content="text/html; charset=utf-8" http-equiv="Content-Type" /><link href="Content/tableSorter.css" rel="stylesheet" type="text/css" /><link href="Content/jquery.tablesorter.pager.css" rel="stylesheet" type="text/css" /><title>
+	
+        
+</title>
+    <!-- If you need to update a JS file, simply up the version query string by 1 in order
+         for the browser to refresh that file.
+        Example:
+            Original Name:
+                <script type="text/javascript" src="/Scripts/common.js"></script>         
+            
+            You make a change to the file, you need to add or up the version number. "Version" is
+            arbatrary, it could be "slkdf8sdl" for all it matters.
+                <script type="text/javascript" src="/Scripts/common.js?version=1"></script>
+            
+            YOu make another change to the file, up the version again:
+                <script type="text/javascript" src="/Scripts/common.js?version=2"></script>    
+            
+            Rinse, repeat.
+     -->
+
+    <script type="text/javascript" src="/Scripts/jquery-1.4.1.min.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery-ui-1.8.16.custom.min.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.validate.min.js"></script>
+
+    <script type="text/javascript" src="/Scripts/common.js?version=3"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.tablesorter.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.tablesorter.pager.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.tablesorter.filter.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.alphanumeric.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.maxlength.js?version=1"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.blockUI.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.livequery.js"></script>
+
+    <script type="text/javascript" src="/Scripts/jquery.maskedinput.js"></script>
+
+    <script type="text/javascript">
+        //<![CDATA[
+
+        $(document).ready(function() {
+            $("#ValidateForm").validate();
+
+            // This adds the "noblock" class to all the tab links
+            // We don't want the tab links to bring up a blocking UI
+            $('ul.tabs').children().children().addClass('noblock');
+
+            // Select all the buttons that have a commandname attribute
+            // and when clicked show the blockUI
+            $('input[commandname]').bind('click', function() {
+                ShowPageBlock()
+            });
+
+            // Show the blockUI for any class of type "block".
+            // This is mainly for any button that does not have a "commandname" 
+            // attribute and is not a submit button.
+            $('.block').bind('click', function() {
+                ShowPageBlock()
+            });
+
+            // Add the block UI to all <a> except those with the class of "noblock"
+            $('a:not(.noblock)').bind('click', function() {
+                ShowPageBlock()
+            });
+
+            $('form').submit(function() {
+                // Show the blocking UI div so as to disable
+                // all controls until the page is valid
+                if ($('form').valid()) {
+                    ShowPageBlock()
+                }
+            });
+
+            //------------ Default button routine -----------------
+            jQuery.fn.defaultbutton = function(element) {
+                if (!element || $(element).size() == 0) return this;
+                return this.bind("keypress",
+		            function(e) {
+		                var key = e.keyCode || e.charCode;
+		                if (key == 13) {
+		                    e.preventDefault();
+		                    $(element)[0].click();
+		                }
+		            }
+	            )
+            }
+
+            jQuery.fn.cancelbutton = function(element) {
+                if (!element || $(element).size() == 0) return this;
+                return this.bind("keypress",
+		            function(e) {
+		                var key = e.keyCode || e.charCode;
+		                if (key == 27) {
+		                    e.preventDefault();
+		                    $(element)[0].click();
+		                }
+		            }
+	            )
+            }
+            $("form").defaultbutton(".defaultButton").cancelbutton(".cancelButton")
+            //------------ END Default button routine -----------------
+            $(".focus").focus();
+            $(".saveScroll").mouseover(function() {
+                fnSaveScroll();
+            });
+            $("[renderDocument]").click(function(event) {
+                event.preventDefault();
+                window.open("/DocumentDisplay.ashx?docId=" + $(this).attr("renderDocument"), "filed", "toolbar=0,menubar=0,resizable=1");
+            });
+            $("[renderCopies]").click(function(event) {
+                event.preventDefault();
+                window.open("../DocumentDisplay.ashx?docId=0&eventId=" + $(this).attr("renderCopies"), "filed", "toolbar=0,menubar=0,resizable=1");
+            });
+            $("[renderFiling]").click(function(event) {
+                event.preventDefault();
+                var docAction = $(this).attr("docAction");
+                window.open("../FilingDocument.ashx?id=" + $(this).attr("renderFiling") + "&docAction=" + docAction, "filed", "toolbar=0,menubar=0,resizable=1");
+            });
+
+            $("[renderPublicationReport]").click(function(event) {
+                event.preventDefault();
+                window.open("../PublicationReportDisplay.ashx?publicationId=" + $(this).attr("renderPublicationReport") + "&reportRunDate=" + $(this).attr("renderPublicationReportRunDate") + "&reportFormat=" + $(this).attr("renderPublicationReportFormat"), "report", "toolbar=0,menubar=0,resizable=1,width=10,height=10");
+            });
+
+            // only allow numbers and "/" in date fields
+            $(".date").numeric({ allow: "/" });
+            // only allow numbers and "/" in date fields. This class is only used for restricting key entry
+            $(".dateEntry").numeric({ allow: "/" });
+
+            // only allow numbers and "-" in SSN/TIN fields
+            $(".ssn").numeric({ allow: "-" });
+            // only allow numbers and "-" in zipcode fields
+            $(".zipcode").numeric({ allow: "-" });
+            $(".numberOnly").numeric();
+            // only allow numbers and "."
+            $(".number").numeric({ allow: "." });
+            $(".numberAndSpaces").numeric({ allow: " " });
+            $(".zipcode").keypress(function(event) {
+                var keyCode = (document.layers) ? event.which : event.keyCode;
+                var keyString = String.fromCharCode(keyCode).toLowerCase();
+                var value = this.value;
+                // We don't care if there's nothing in the zipcode
+                // or the value is less than 5 numbers. We only want
+                // to capture the value if it's the 6th character being added.
+                if ((value == null || value.length < 5) || (value.length == 5 && keyString == "-")
+                    || (value.length > 5))
+                    return;
+                this.value = value + "-";
+            });
+            $("#tabList li").each(function() {
+                $(this).click(function(event) {
+                    event.preventDefault();
+                    var _tab;
+                    $("#tabList li").each(function() {
+                        $(this).removeClass("selected");
+                        _tab = $(this).attr("ref");
+                        $("#" + _tab).hide();
+                    });
+                    $(this).addClass("selected");
+                    _tab = $(this).attr("ref");
+                    $("#" + _tab).show();
+
+                });
+            });
+            $("table.zebra tr:even").addClass("alt_color");
+            $("table.zebra tr:odd").addClass("alt_row");
+
+            // Shows the date picker
+            $(".isDatepicker").datepicker({ showOn: 'button', buttonImageOnly: true, buttonImage: '../images/calendar.jpg' });
+
+            $(".postBack").click(function(event) {
+                event.preventDefault();
+                var _confirmed = true;
+                if ($(this).hasClass('confirm')) {
+                    _confirmed = confirm("Please click OK to delete this record.");
+                }
+                if (_confirmed) {
+                    var _arg = document.createElement("input");
+                    _arg.value = $(this).attr("commandName");
+                    if (_arg.value.length > 0) {
+                        _arg.id = "FormAction";
+                        _arg.name = "FormAction";
+
+                        _arg.type = "hidden";
+                        document.forms.item(0).appendChild(_arg);
+
+                        var _val = document.createElement("input");
+                        _val.id = "FormValue";
+                        _val.name = "FormValue";
+                        _val.value = $(this).attr("commandValue");
+                        _val.type = "hidden";
+                        document.forms.item(0).appendChild(_val);
+                    }
+                    document.forms[0].submit();
+                }
+            });
+            //Set maxlength of all the textarea (call plugin)   
+            $().maxlength();
+        });
+        jQuery.validator.addMethod("zipcode", function(zip) {
+            // matches US ZIP code
+            // allow either five digits or nine digits with an optional '-' between
+            zip = zip.replace(/^\s+/, "");
+            zip = zip.replace(/\s+$/, "");
+            if (zip.length == 0) {
+                return true;
+            }
+            // don't allow all zeros
+            if (zip == '00000' || zip == '00000-0000')
+                return false;
+            // Zip must be greater than 600, which is the lowest zipcode            
+            var zipTemp = zip.replace(/^[0]+/g, "");
+            if (parseInt(zipTemp) < 600)
+                return false;
+            if (zip.match(/^\d{5}([- ]?\d{4})?$/)) {
+                return true;
+            }
+            return false;
+        }, "Please specify a valid US ZIP code");
+        jQuery.validator.addMethod("ssn", function(ssn) {
+            // matches SSN or TIN
+            // allow either nine digits with the format 000000000 or 000-00-0000 or 00-0000000
+            // Per discussion with Sky (5/6/10) allow for obfuscated SSN here.
+            ssn = ssn.replace(/^\s+/, "");
+            ssn = ssn.replace(/\s+$/, "");
+            if (ssn.length == 0 || ssn == '*********') {
+                return true;
+            }
+            // don't allow all zeros
+            if (ssn == '000000000' || ssn == '000-00-0000' || ssn == '00-0000000')
+                return false;
+
+            if (ssn.match(/^\d{9}?$/) || ssn.match(/^\d{3}-\d{2}-\d{4}?$/) || ssn.match(/^\d{2}-\d{7}?$/)) {
+                return true;
+            }
+            return false;
+        }, "Please specify a valid SSN or TIN");
+
+        function ShowPageBlock() {
+            setTimeout("$.blockUI({ message: $('#domMessage') })");
+        }
+
+        //]]>
+    </script>
+
+        
+    <script type="text/javascript">
+        $(window).load(function() {
+            SetSelectedTab("");
+        });
+    </script>
+<link href="App_Themes/DCRA/ndfront.css" type="text/css" rel="stylesheet" /><link href="App_Themes/DCRA/ui.all.css" type="text/css" rel="stylesheet" /></head>
+<body>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <body>
+        <div id="skip">
+            <a href="#pcontent">Skip to Main Content</a></div>
+        <dcheader>
+        <!-- Header Section -->
+        <script src="http://remoteui.dc.gov/staticfiles/lib/yui/utilities/utilities.js" type="text/javascript"></script>
+	    <script src="http://remoteui.dc.gov/staticfiles/js/dcInit.js" type="text/javascript"></script>
+        <script src="http://remoteui.dc.gov/staticfiles/js/dcTopNav.js" type="text/javascript"></script>
+        <script src="http://remoteui.dc.gov/staticfiles/js/dcInfoNav.js" type="text/javascript"></script>
+        <!--[if lt IE 7]>
+        <script language="JavaScript">
+        function correctPNG() // correctly handle PNG transparency in Win IE 5.5 & 6.
+        {
+           var arVersion = navigator.appVersion.split("MSIE")
+           var version = parseFloat(arVersion[1])
+           if ((version >= 5.5) && (document.body.filters)) 
+           {
+              for(var i=0; i<document.images.length; i++)
+              {
+                 var img = document.images[i]
+                 var imgName = img.src.toUpperCase()
+                 if (imgName.substring(imgName.length-3, imgName.length) == "PNG")
+                 {
+                    var imgID = (img.id) ? "id='" + img.id + "' " : ""
+                    var imgClass = (img.className) ? "class='" + img.className + "' " : ""
+                    var imgTitle = (img.title) ? "title='" + img.title + "' " : "title='" + img.alt + "' "
+                    var imgStyle = "display:inline-block;" + img.style.cssText 
+                    if (img.align == "left") imgStyle = "float:left;" + imgStyle
+                    if (img.align == "right") imgStyle = "float:right;" + imgStyle
+                    if (img.parentElement.href) imgStyle = "cursor:hand;" + imgStyle
+                    var strNewHTML = "<span " + imgID + imgClass + imgTitle
+                    + " style=\"" + "width:" + img.width + "px; height:" + img.height + "px;" + imgStyle + ";"
+                    + "filter:progid:DXImageTransform.Microsoft.AlphaImageLoader"
+                    + "(src=\'" + img.src + "\', sizingMethod='scale');\"></span>" 
+                    img.outerHTML = strNewHTML
+                    i = i-1
+                 }
+              }
+           }    
+        }
+        window.attachEvent("onload", correctPNG);
+        </script>
+        <![endif]-->
+        <style>
+            .dcMasthead
+            {
+                width: 972px;
+                background: url(http://remoteui.dc.gov/staticfiles/img/dcHeaderBg_ver2.jpg) repeat-x scroll 0 0 transparent;
+                height: 140px;
+                border-top: 3px solid #b50100;
+            }
+            .dcMasthead .flagCell
+            {
+                background: url(http://remoteui.dc.gov/staticfiles/img/dcFlag_ver2.jpg) no-repeat scroll 0 0 transparent;
+                width: 272px;
+                height: 112px;
+                float: left;
+                margin-left: 100px;
+                margin-top: 28px;
+            }
+        
+            .subHeader
+            {
+                clear: both;
+                background-color: #013356;
+                border-top: 1px solid #34688f;
+                height: 33px;
+                width: 972px;
+                position: static;
+            }
+        
+            .dcMasthead .rightHeader
+            {
+                width: 105px;
+                float: left;
+                margin-left: 86px;
+                margin-top: 18px;
+                position: static;
+            }
+        
+            .dcMasthead .rightHeader .logo2HeaderBox
+            {
+                position: absolute;
+                top: 8px;
+            }
+        
+            .dcTopNav_item img
+            {
+                border: medium none;
+            }
+            .dcLogo
+            {
+                width: 233px;
+                float: left;
+                padding-left: 14px;
+                padding-top: 34px;
+            }
+            .dcSearchBar *
+            {
+                margin: 0px;
+                padding: 0px;
+            }
+            .dcSearchBar
+            {
+                float: left;
+                padding-left: 12px;
+                padding-top: 3px;
+                width: 400px;
+                text-align: left;
+            }
+            .dcSearchBar fieldset
+            {
+                vertical-align: top;
+                border: none;
+                margin: 0px;
+                padding: 0px;
+            }
+            .dcSearchForm_leftCap img
+            {
+                margin: 0;
+                padding: 0;
+            }
+            .dcSearchForm
+            {
+                background-repeat: repeat-x;
+                background-image: url(http://remoteui.dc.gov/staticfiles/img/gsearchbar_repeat_ver2.jpg);
+                background-position: top left;
+                width: 175px;
+                height: 22px;
+                padding-top: 5px;
+                padding-bottom: 0px;
+                margin: 0px;
+            }
+            .dcSearchFormInput
+            {
+                border-width: 0px;
+                padding-left: 10px;
+                font-size: 13px;
+                width: 175px;
+                margin: 0px;
+            }
+            .dcSearchButton
+            {
+                padding: 0px;
+                margin: 0px;
+            }
+            .inner_site-filter
+            {
+                padding-top: 6px;
+                padding-left: 120px;
+                font-size: 13px;
+            }
+            .dcHeaderLinks
+            {
+                font-size: 11px;
+                color: #FFFFFF;
+                vertical-align: top;
+                text-align: right;
+                font-family: Arial,Helvetica,sans-serif;
+                line-height: 19px;
+                float: right;
+                padding-top: 6px;
+                width: 510px;
+            }
+            .dcHeaderLinks ul
+            {
+                margin: 0;
+                padding: 0;
+            }
+            .dcHeaderLinks li
+            {
+                display: inline;
+                vertical-align: top;
+                padding: 2px;
+            }
+            .dcTopNav
+            {
+                text-align: left;
+                width: 100%;
+                background-color: #003463;
+                height: 37px;
+                white-space: nowrap;
+                padding: 0px;
+                margin: 0px;
+            }
+            .dcTopNav ul
+            {
+                display: inline;
+            }
+            .dcTopNav li
+            {
+                display: inline;
+                margin: 0px;
+                padding: 0px;
+                width: 162px;
+                height: 37px;
+            }
+            .dcTopNav a
+            {
+                text-decoration: none;
+            }
+            .dcTopNav .dcSubNav
+            {
+                height: 25px;
+                padding: 6px 12px 2px 12px;
+            }
+            .dcTopNav .dcSubNav li a:link
+            {
+                text-decoration: none;
+                color: #000000;
+            }
+            .dcTopNav .dcSubNav li a:visited
+            {
+                text-decoration: none;
+                color: #000000;
+            }
+            .dcTopNav .dcSubNav li a:hover
+            {
+                text-decoration: underline;
+                color: #000000;
+            }
+            .dcTopNav .dcSubNav .dcDivider
+            {
+                color: #959595;
+                padding: 0 .75em 0 .75em;
+            }
+            .dcTopNav .dcSubNavRight
+            {
+                float: right;
+                height: 22px;
+            }
+            #skip a, #skip a:hover, #skip a:visited
+            {
+                position: absolute;
+                left: 0px;
+                top: -500px;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+            }
+            #skip a:active, #skip a:focus
+            {
+                position: static;
+                width: auto;
+                height: auto;
+            }
+            .dcHeaderLinks a
+            {
+                color: #FFFFFF;
+                margin: 0;
+                padding: 0;
+                text-decoration: none;
+                font-family: Arial,Helvetica,sans-serif;
+                font-size: 11px;
+                font-weight: bold;
+            }
+            .dcHeaderLinks a:visited
+            {
+                color: #FFFFFF;
+            }
+            .dcHeaderLinks a:hover
+            {
+                color: #FFFFFF;
+                text-decoration: underline;
+            }
+            body
+            {
+                padding: 0px;
+                margin: 0px;
+            }
+            /* additional styles */
+            *
+            {
+                font-family: Arial,Helvetica,sans-serif;
+            }
+            .dcContentTitle
+            {
+                font-size: 20px;
+                margin-bottom: 11px;
+                margin-top: 8px;
+                color: #2E2E2E;
+                font-weight: 200;
+                padding: 0px;
+            }
+            a, .RED a, red a
+            {
+                text-decoration: none;
+                color: #0157B0;
+            }
+            a:visited, .RED a:visited, .red a:visited
+            {
+                text-decoration: none;
+                color: #0157B0;
+            }
+            a:hover, .RED a:hover, .red a:hover
+            {
+                text-decoration: underline;
+                color: #0157B0;
+            }
+            .contentContainer
+            {
+                width: 972px;
+                margin-right: auto;
+                margin-left: auto;
+                text-align: left;
+            }
+            .fulldcHeader
+            {
+                background-color: #003463;
+            }
+            body
+            {
+                text-align: center;
+            }
+            .dcMasthead
+            {
+                margin-left: auto !important;
+                margin-right: auto !important;
+            }
+            .fulldcHeader
+            {
+                background-color: #FFFFFF !important;
+            }
+            .subHeader
+            {
+                margin-left: auto !important;
+                margin-right: auto !important;
+            }
+            .dcTopNav
+            {
+                text-align: center !important;
+                background-color: #FFFFFF !important;
+            }
+        </style>
+        <div class="fulldcHeader">
+        <div class="dcLayout dcMasthead">
+            <div class="dcLogo">
+                <a title="DC.gov Home" href="http://dc.gov"><img border="0" align="top" alt="DC.gov Home" src="http://remoteui.dc.gov/staticfiles/img/DCgovLOGO_ver2.png"></a>
+            </div>
+            <div class="flagCell">
+            </div>
+            <div class="rightHeader">
+                <img src="http://remoteui.dc.gov/staticfiles/img/oneCityLOGO_ver2.png" border="0" alt="" align="top" class="logo2HeaderBox" alt="One City" title="One City" />
+                <a href="http://mayor.dc.gov" title="Mayor Vincent C. Gray"><img src="http://remoteui.dc.gov/staticfiles/img/dcHeaderMayor_ver2.png" border="0" alt="" align="top" class="mayorHeaderBox" alt="Mayor Vincent C. Gray" /></a>
+            </div>
+        </div>
+        <div class="subHeader">
+            <div class="dcSearchBar">
+                    <!--<form action="javascript:submitForm()" method="get" id="gs" name="gs">		-->			
+                        <fieldset>
+                            <table cellspacing="0">
+                                <tr>
+                                    <td>
+                                        <img class="dcSearchForm_leftCap" src="http://remoteui.dc.gov/staticfiles/img/gsearchbar_left_ver2.jpg" alt=""/>
+                                    </td>
+                                    <td class="dcSearchForm">
+                                        <input name="q" type="text" class="dcSearchFormInput" maxlength="" title="Type keyword, phrase or question" value="Search" onFocus="if(this.value=='Search'){this.value=''}" onBlur="if(this.value==''){this.value='Search'}" /><br />
+                                        <input type="hidden" name="output" value="xml_no_dtd" />
+                                        <input type="hidden" name="oe" value="UTF-8" />
+                                        <input type="hidden" name="ie" value="UTF-8" />
+                                        <input type="hidden" name="client" value="dc_v2" />
+ 
+                                        <input type="hidden" name="proxystylesheet" value="dc_v2" />
+                                        <input type="hidden" name="site" value="" />
+                                    </td>
+                                    <td>
+                                        <img class="dcSearchButton" onClick="submitForm()" title="Search" src="http://remoteui.dc.gov/staticfiles/img/gsearchbar_button2_ver2.jpg" alt="Search" />
+                                    </td>
+                                    <td>
+                                        <div class="site-filter dcSearchFilter"> 
+                                            <div class="inner_site-filter">
+                                                <table>
+                                                <tr>
+                                                <TD>
+                                                <script type="text/JavaScript">
+                                                    function submitForm() {
+                                                        document.gs.action = "http://google.dc.gov/search";
+                                                        document.gs.submit();
+                                                    }
+                                                </script>
+                                                </td>
+                                                </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </fieldset>
+                     <!--</form>-->
+                </div>
+                <div class="dcHeaderLinks">	
+                        <ul>
+                            <li><a href="http://app.dc.gov/apps/about.asp?page=atd&type=dsf&referrer=[$DSF_SERVER_NAME$]&agency_id=1075" title="Ask the Mayor">Ask the Mayor</a></li>
+                            <li class="dcDivider">|</li>
+                            <li><a href="https://service.govdelivery.com/service/multi_subscribe.html?code=DCWASH&partner_id=441&mailsender=default" title="Subscribe to Emails">Subscribe to Emails</a></li>
+                            <li class="dcDivider">|</li>
+                            <li><a href="http://app.dc.gov/agencies/index.asp" title="Agency Directory">Agency Directory</a></li>
+                            <li class="dcDivider">|</li>
+                            <li><a href="http://311.dc.gov/" title="311 Online">311 Online</a></li>
+                            <li class="dcDivider">|</li>
+                            <li class="dcLastChild"><a href="http://app.dc.gov/closures/index.asp" title="Closures">Closures</a></li>&nbsp;
+                        </ul>								
+                </div>
+        </div>
+        <div class="dcTopNav" style="clear:both;">
+            <ul style="padding:0px; margin:0px;"><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://dc.gov/DC/Service+Request+Center" title="311 Online"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/311OnlineVer2.jpg" alt="311 Online" /></a></li><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://dc.gov/DC/Area+Residents" title="District Residents"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/districtResidentsVer2.jpg" alt="District Residents" /></a></li><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://dc.gov/DC/Business+and+Non-Profit" title="Businesses"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/businessesVer2.jpg" alt="Businesses" /></a></li><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://dc.gov/DC/Visitors" title="Visitors"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/visitorsVer2.jpg" alt="Visitors" /></a></li><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://dc.gov/DC/Mayor/About+the+Mayor/News+Room/Press+Releases" title="Media"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/mediaVer2.jpg" alt="Media" /></a></li><li class="dcTopNav_item" onMouseOver="DC.topNav.doImageOver(this)" onMouseOut="DC.topNav.doImageOut(this)"><a  href="http://app.dc.gov/more_services.asp?category=services&tab=0" title="Online Services"><img src="http://remoteui.dc.gov/staticfiles/img/topnav/onlineServicesVer2.jpg" alt="Online Services" /></a></li></ul>  
+        </div>
+        </div>
+        <!-- End Header Section -->
+        </dcheader>
+    </body>
+</html>
+
+    
+
+    <div class="headlow">
+        <div class="hnav">
+               <a href="/Home.aspx">Home</a>
+               
+        </div>
+        <div class="hwelcome">
+            <a href="/Account.aspx/AccountManagement">Edit Account</a>&nbsp;|&nbsp;<a href="/Account.aspx/LogOff">Log Out</a>
+            <!-- TODO: asp:LoginView Control -->
+            <!-- TODO: asp:LoginStatus Control -->
+        </div>
+    
+    <div class="page_content">
+        
+	<form action="/Home.aspx/ProcessRequest" id="ValidateForm" method="post" name="ValidateForm">
+
+    <div>
+        
+    </div>
+    
+    <!-- ========= Shopping Cart Area =========== -->
+		
+	<!-- ========= End Shopping Cart Area =========== -->
+	<!-- ========= Tab List =========== -->
+   <div class="tabgroup" style="margin-top:10px">
+		<div class="tabs">
+			<ul class="tabs" id="tabList">
+            
+    			<li ref="3"><a href="#" class="noblock">Business Filings</a></li>
+            
+				<li ref="PendedServices"><a href="#" class="noblock">Services Management</a></li>
+				<li ref="PreviousServices"><a href="#" class="noblock">Approved Services</a></li>
+                <li ref="BizEntitySearch"><a href="#" class="noblock">Business Filings Search</a></li>
+			</ul>
+		</div>
+	</div>
+	<!-- ========= End Tab List =========== -->
+	
+	<!-- ========= Pended Filings Tab Content =========== -->
+
+	 <div class="tabcontent" id="3">
+        
+<div class="onlineservices">
+<div class="table_heading">
+    <h2>Business Filings Online Services</h2>
+</div>
+
+
+<table width="100%">
+    <tr>
+    
+        <td width="50%" valign="top">
+        <h3>Domestic</h3>
+        
+        	<div class="serviceheader">General Cooperative Association</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/37">General CA Articles of Incorporation Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Liability Company</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/119">LLC/PLLC Articles of Organization DLC-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/36">LP Certificate of Limited Partnership Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Liability Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/35">LLP Statement of Qualification DLLP-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">General Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/40">GP Statement of Authority DGP-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Trade Name</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/122">Trade Name Registration TN-1 Form Web</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/237">Trade Name Non-Entity Registration TN-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Name Reservation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/58">Business Name Reservation GN-3 Form Web</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/234">Non-Profit Name Reservation GN-3 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Periodic Report</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/125">For-Profit Domestic BRA-25 Report Online</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/231">Non-Profit Domestic BRA-25 Report Online</a>
+                </div>
+            
+        	<div class="serviceheader">For-Profit Corporation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/6">Prof. Articles of Incorporation DPR-1 Web</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/33">ForProfit Articles of Incorporation DBU-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Non-Profit Corporation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/31">NonProfit Articles of Incorporation DNP-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Cooperative Association</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/38">LimitedCA Articles of Organization DLCA-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Statutory Trust</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/39">Statutory Trust Certificate of Trust Web</a>
+                </div>
+            
+        	<div class="serviceheader">Document Order</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/287">Domestic Non-Profit Good Standing Online</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/289">Domestic For-Profit Good Standing Online</a>
+                </div>
+            
+        </td>
+    
+        <td width="50%" valign="top">
+        <h3>Foreign</h3>
+        
+        	<div class="serviceheader">General Cooperative Association</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/223">General CA Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Liability Company</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/41">LLC Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/228">LP Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Liability Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/229">LLP Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">General Partnership</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/230">GP Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Name Reservation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/235">Non-Profit Name Registration GN-4 Form Web</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/236">Business Name Registration GN-4 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Periodic Report</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/290">For-Profit Foreign BRA-25 Report</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/291">Non-Profit Foreign BRA-25 Report</a>
+                </div>
+            
+        	<div class="serviceheader">For-Profit Corporation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/227">ForProfit Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Non-Profit Corporation</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/222">NonProfit Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Limited Cooperative Association</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/224">Limited CA Foreign Registration FN-1 Form Web</a>
+                </div>
+            
+        	<div class="serviceheader">Statutory Trust</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/226">Statutory Trust Foreign Registration FN-1 Web</a>
+                </div>
+            
+        	<div class="serviceheader">Document Order</div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/283">Foreign Non-Profit Good Standing Online</a>
+                </div>
+            
+            	<div class="servicedetail">
+                <a href="/Biz.aspx/RedirectFromNewService/285">Foreign For-Profit Good Standing Online</a>
+                </div>
+            
+        </td>
+    
+    </tr>
+</table>
+   
+
+</div>
+
+    </div>
+
+	 <div class="tabcontent" id="PendedServices">
+        
+<div class="table_heading2">
+    <h2>
+        Pending Services</h2>
+</div>
+<div class="caption">
+    Items pending submission by this account/customer.
+</div>
+<table class="vertable" cellspacing="0" width="100%">
+    <tr class="alt_color">
+        <th style="width:110px;" scope="col">
+            Work Order Id
+        </th>
+        <th style="width:150px;" scope="col">
+            Transaction
+        </th>
+        <th style="width:310px;" scope="col">
+            Name
+        </th>
+        <th style="width:150px;" scope="col">
+            Date Submitted
+        </th>
+        <th style="width:95px;" scope="col">
+        </th>
+    </tr>
+    
+</table>
+<div class="table_heading2">
+    <h2>
+        Received Services</h2>
+</div>
+<div class="caption">
+    Items submitted by this account/customer and received for processing.
+</div>
+<table class="vertable" cellspacing="0" width="100%">
+    <tr class="alt_color">
+        <th style="width:110px;" scope="col">
+            Work Order Id
+        </th>
+        <th style="width:150px;" scope="col">
+            Transaction
+        </th>
+        <th style="width:310px;" scope="col">
+            Name
+        </th>
+        <th style="width:150px;" scope="col">
+            Date Submitted
+        </th>
+        <th style="width:95px;" scope="col">
+        </th>
+    </tr>
+    
+</table>
+<div class="table_heading2">
+    <h2>
+        Rejected Services</h2>
+</div>
+<div class="caption">
+    Items rejected during the approval process. Review the rejection letter, correct any deficiencies and resubmit your filing for approval.
+</div>
+<table class="vertable" cellspacing="0" width="100%">
+    <tr class="alt_color">
+        <th style="width:110px;" scope="col">
+            Work Order Id
+        </th>
+        <th style="width:130px;" scope="col">
+            Transaction
+        </th>
+        <th style="width:250px;" scope="col">
+            Name
+        </th>
+        <th style="width:100px;" scope="col">
+            Date Submitted
+        </th>
+        <th style="width:75px;" scope="col">
+        </th>
+        <th style="width:30px;" scope="col">
+        </th>
+        <th style="width:35px;" scope="col">
+        </th>
+    </tr>
+    
+</table>
+
+    </div>	
+	 <div class="tabcontent" id="PreviousServices">
+        
+
+<script type="text/javascript">
+
+    function toggledocs(divid) {
+        if (document.getElementById(divid).style.display == 'block')
+            document.getElementById(divid).style.display = 'none';
+        else
+            document.getElementById(divid).style.display = 'block';
+    }
+
+</script>
+
+<div style="height: 60px;" class="instructions">
+    This tab provides access to the previous and approved services created through this login; it will return all services currently in the system that have not been deleted. 
+    To perform a more specific search for all filings processed with this login, use the relevant Search tab.
+    <br />
+    <br />
+    If your service has been approved, it will appear below. Click on the document plus sign to the left of the service to view the associated documents.
+</div>
+<br />
+<br />
+<!-- ========= Recent Filings =========== -->
+<div class="table_heading2">
+    <h2>
+        Approved Services</h2>
+</div>
+<table class="vertable" cellspacing="0" width="100%" style="clear: both;">
+    <tr class="alt_color">
+        <th style="width: 10px;" scope="col">
+        </th>
+        <th scope="col">
+            Work Order Id
+        </th>
+        <th scope="col" style="width:200px;">
+            Transaction
+        </th>
+        <th style="width: 350px;" scope="col">
+            Name
+        </th>
+        <th scope="col">
+            Date Filed
+        </th>
+    </tr>
+    
+ </table>
+<br />
+
+	</div>
+    <div class="tabcontent" id="BizEntitySearch">
+        
+
+<script type="text/javascript">          
+//<![CDATA[
+           
+	 $(document).ready(function() {
+
+            $("#BizEntitySearch_SearchResultsTable:has(tbody tr)").tablesorter({ debug: false, sortList: [[0, 0]], widgets: ['zebra'] })
+                .tablesorterPager({ container: $("#pager_bizentitysearchresults"), positionFixed: false,
+                select: "pageSize_bizentitysearchresults",
+                firstButton: "firstButton_bizentitysearchresults",
+                prevButton: "prevButton_bizentitysearchresults",
+                nextButton: "nextButton_bizentitysearchresults",
+                lastButton: "lastButton_bizentitysearchresults",
+                 size:4});
+                 
+        $("#fileNumberSearchType").click(function () {
+            $('#BizEntitySearch_TradeNameStatus_Section').hide(200);
+            $('#BizEntitySearch_EntityStatus_Section').show(200);
+        });
+
+        $("#nameSearchType").click(function () {
+            $('#BizEntitySearch_TradeNameStatus_Section').hide(200);
+            $('#BizEntitySearch_EntityStatus_Section').show(200);
+        });
+
+        $("#tradeNameSearchType").click(function () {
+            $('#BizEntitySearch_TradeNameStatus_Section').show(200);
+            $('#BizEntitySearch_EntityStatus_Section').hide(200);
+        });
+
+        $("#documentTrackingNumber").click(function () {
+            $('#BizEntitySearch_TradeNameStatus_Section').hide(200);
+            $('#BizEntitySearch_EntityStatus_Section').hide(200);
+        });
+
+    });
+
+    function toggledocs(divid) {
+        if (document.getElementById(divid).style.display == 'block')
+            document.getElementById(divid).style.display = 'none';
+        else
+            document.getElementById(divid).style.display = 'block';
+    }
+
+//]]>
+</script>
+
+<div>
+    <fieldset class="blessfset">
+        <legend class="legendhead">Search Criteria</legend>
+        <br />
+        <table cellpadding="0" cellspacing="5">
+            <tr>
+                <td class="rlabel">
+                    <label for="SearchString">
+                        Inquiry:</label>
+                </td>
+                <td>
+                    <input MaxLength="200" Size="50" id="BizEntitySearch_String" name="BizEntitySearch_String" type="text" value="" />
+                </td>
+                <td>
+                    <button type="submit" value="Search" id="Search" name="Search"><span><span>Search</span></span></button>
+                </td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td class="rlabel">
+                    Search Type:
+                </td>
+                <td class="radsp">
+                    <input checked="checked" id="fileNumberSearchType" name="BizEntitySearch_Type" type="radio" value="FileNumber" />
+                    <label for="fileNumberSearchType">
+                        File Number</label>
+                </td>
+                <td class="radsp">
+                    <input id="nameSearchType" name="BizEntitySearch_Type" type="radio" value="EntityName" />
+                    <label for="nameSearchType">
+                        Entity Name</label>
+                </td>
+                <td class="radsp">
+                    <input id="tradeNameSearchType" name="BizEntitySearch_Type" type="radio" value="TradeName" />
+                    <label for="tradeNameSearchType">
+                        Trade Name</label>
+                </td>
+                <td class="radsp">
+                    <input id="documentTrackingNumber" name="BizEntitySearch_Type" type="radio" value="DocumentTrackingNumber" />
+                    <label for="documentTrackingNumber">
+                        Doc. Tracking #</label>
+                </td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td class="rlabel">
+                    Search Depth:
+                </td>
+                <td class="radsp">
+                    <input checked="checked" id="exactMatchSearchDepth" name="BizEntitySearch_DepthType" type="radio" value="ExactMatch" />
+                    <label for="exactMatchSearchDepth">
+                        Exact Match</label>
+                </td>
+                <td class="radsp">
+                    <input id="startsWithSearchDepth" name="BizEntitySearch_DepthType" type="radio" value="StartsWith" />
+                    <label for="startsWithSearchDepth">
+                        Starts With</label>
+                </td>
+                <td class="radsp">
+                    <input id="containsSearchDepth" name="BizEntitySearch_DepthType" type="radio" value="Contains" />
+                    <label for="containsSearchDepth">
+                        Contains</label>
+                </td>
+            </tr>
+        </table>
+        <div id="BizEntitySearch_EntityStatus_Section" style="display: ;">
+            <table>
+                <tr>
+                    <td class="fslabel">
+                        Entity Status:
+                    </td>
+                    <td>
+                        <select id="BizEntitySearch_EntityStatus" name="BizEntitySearch_EntityStatus" class=""><option value="" selected="selected">Select...</option><option value="Active" >Active</option><option value="Canceled" >Canceled</option><option value="Consolidated" >Consolidated</option><option value="Dissolved" >Dissolved</option><option value="Domesticated" >Domesticated</option><option value="Expired" >Expired</option><option value="Merged" >Merged</option><option value="OldAct" >OldAct</option><option value="Revoked" >Revoked</option><option value="Terminated" >Terminated</option><option value="Withdrawn" >Withdrawn</option></select>
+                        <span class="errorText"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div id="BizEntitySearch_TradeNameStatus_Section" style="display: none;">
+            <table>
+                <tr>
+                    <td class="fslabel">
+                        Trade Name Status:
+                    </td>
+                    <td>
+                        <select id="BizEntitySearch_TradeNameStatus" name="BizEntitySearch_TradeNameStatus" class=""><option value="" selected="selected">Select...</option><option value="Active" >Active</option><option value="Expired" >Expired</option><option value="Cancelled" >Cancelled</option><option value="Transferred" >Transferred</option><option value="Deprecate" >Deprecate</option></select>
+                        <span class="errorText"></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </fieldset>
+    <br />
+    <div>
+        <div class="section_heading">
+            <h2>Search Results</h2>
+        </div>
+        <table id="BizEntitySearch_SearchResultsTable" class="tablesorter" cellspacing="0" style="width: 100%;">
+            <thead>
+                <!-- TODO: Set width here? -->
+                <tr>
+                    <th style="width: 10px;" scope="col">
+                    </th>
+                    <th>
+                        Name
+                    </th>
+                    <th>
+                        File Number
+                    </th>
+                    <th>
+                        Effective Date
+                    </th>
+                    <th>
+                        Status
+                    </th>
+                    <th>
+                        ModelType
+                    </th>
+                    <th>
+                        Locale
+                    </th>
+                    <th>
+                        Qualifier
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            </tbody>
+        </table>
+    
+        <div id="pager_bizentitysearchresults" class="pager" style="padding-top: 5px; text-align: right;">
+                                <img id="firstButton_bizentitysearchresults" src="/Content/Images/pager/first.png" alt="First Record" class="first" />
+                                <img id="prevButton_bizentitysearchresults" src="/Content/Images/pager/prev.png" alt="Previous Record" class="prev" />
+                                <input type="text" class="pagedisplay" readonly="readonly" style="width: 60px; text-align: center;" />
+                                <img id="nextButton_bizentitysearchresults" src="/Content/Images/pager/next.png" alt="Next Record" class="next" />
+                                <img id="lastButton_bizentitysearchresults" src="/Content/Images/pager/last.png" alt="Last Record" class="last" />
+                                <select id="pageSize_bizentitysearchresults" class="pagesize">
+<option selected="selected" value="4">4</option>
+<option value="10">10</option>
+<option value="30">30</option>
+<option value="50">50</option>
+</select></div>
+    </div>
+</div>
+
+	</div>
+    </form>
+    </div>
+
+    <div id="domMessage" style="display: none;">
+        <br />
+        <img alt="spin" src="/Content/Images/spin.gif" /><br />
+        <h3>
+            Please wait...</h3>
+    </div>
+
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<dcfooter>
+    <!-- Footer section -->
+    <style>
+        /* Footer CSS */
+        .dcFooter
+        {
+            font-size: 11px;
+            text-align: center;
+            padding-bottom: 24px;
+            padding-top: 40px;
+            line-height: 19px; /* OCTO 2.6 */
+            clear: both;
+        }
+        .dcFooter li
+        {
+            display: inline;
+        }
+        .dcFooter li.dcDivider
+        {
+            color: #959595;
+            margin: 0 10px 0 10px;
+        }
+        .dcFooter .dcBar
+        {
+            border-width: 1px 0 0 0;
+            border-color: #CDCCCA;
+            border-style: solid;
+        }
+        .dcFooter .dcLinks
+        {
+            margin-right: 75px;
+        }
+        .dcFooter a
+        {
+            color: #0157B0;
+            font-family: Arial,Helvetica,sans-serif;
+            text-decoration: none;
+        }
+        .dcFooter a:visited
+        {
+            color: #0157B0;
+        }
+        .dcFooter a:hover
+        {
+            text-decoration: underline;
+        }
+        .dcFooterList
+        {
+            display: inline-block;
+            margin: 6px 18px 6px 18px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 10px;
+            font-family: Arial,Helvetica,sans-serif;
+        }
+        .dcFooterList h4
+        {
+            margin: 0px;
+            padding: 0px;
+        }
+        .dcFooterList ul
+        {
+            margin: 0px;
+            padding: 0px;
+        }
+        .dcFooterList li
+        {
+            display: list-item;
+            list-style: none;
+        }
+        .dcFooterList ul li.dcFirstChild
+        {
+            font-weight: bolder;
+            list-style: none;
+        }
+        .dcFooterLabel
+        {
+            color: #4f4f4f;
+            font-weight: bold;
+            font-size: 11px;
+            font-family: Arial,Helvetica,sans-serif;
+        }
+        .dcFooterListLower
+        {
+            display: inline-block;
+            margin: 6px 18px;
+        }
+        .dcFooterListLower ul
+        {
+            margin: 0px;
+            padding: 0px;
+        }
+    </style>
+    <div class="dcFooter">
+        <div class="dcBar">
+        	<span class="dcFooterList">
+        	    <h4 class="dcFooterLabel">District News</h4>
+        		<ul>
+        			 <li><a target='_blank' href="http://dc.gov/DC/Mayor/News+Room/Public+Schedule" title="Press Briefings & Schedules" class="noblock">Press Briefings & Schedules</a></li>
+     				 <li><a target='_blank' href="http://dc.gov/DC/Mayor/About+the+Mayor/News+Room/Press+Releases" title="Statements & Releases" class="noblock">Statements & Releases</a></li>
+      				 <li><a target='_blank' href="https://service.govdelivery.com/service/user.html?origin=&code=DCWASH" title="Subscribe to Emails" class="noblock">Subscribe to Emails</a></li>
+      				 <li><a target='_blank' href="https://textalert.ema.dc.gov/index.php?CCheck=1" title="Subscribe to Text Alerts" class="noblock">Subscribe to Text Alerts</a></li>
+       				 <li><a target='_blank' href="http://dc.gov/DC/Subscribe/Online+Chats" title="Online Chats" class="noblock">Online Chats</a></li>
+       				 <li><a target='_blank' href="http://dc.gov/DC/Subscribe/Social+Networks" title="DC.Gov Social Networks" class="noblock">DC.Gov Social Networks</a></li>
+       				 <li><a target='_blank' href="http://app.dc.gov/index_vid2.asp?portal_link=rc" title="DC Webcasts" class="noblock">DC Webcasts</a></li>
+       				 <li><a target='_blank' href="http://app.dc.gov/closures/index.asp" title="Government Closures" class="noblock">Government Closures</a></li>
+    			 </ul>
+		    </span>
+        	<span class="dcFooterList">
+        		<h4 class="dcFooterLabel">Information Centers</h4>
+        		    <ul>
+        				<li><a target='_blank' href="http://72hours.dc.gov/eic/site/default.asp" title="72hours Emergency Planning" class="noblock">72hours Emergency Planning</a></li>
+        				<li><a target='_blank' href="http://brc.dc.gov/index.asp?portal_link=h" title="Business" class="noblock">Business</a></li>
+        				<li><a target='_blank' href="http://consumer.dc.gov" title="Consumer Protection" class="noblock">Consumer Protection</a></li>
+           				<li><a target='_blank' href="http://dc.gov/DC/Education" title="Education" class="noblock">Education</a></li>
+        				<li><a target='_blank' href="http://hc.rrc.dc.gov/hc/site/default.asp?portal_link=cc" title="Health" class="noblock">Health</a></li>
+        				<li><a target='_blank' href="http://ssc.rrc.dc.gov/ssc/site/default.asp?portal_link=cc" title="Social Services" class="noblock">Social Services</a></li>
+          				<li><a target='_blank' href="http://rrc.dc.gov/rrc/site/default.asp" title="Residents" class="noblock">Residents</a></li>
+        				<li><a target='_blank' href="http://vrc.dc.gov/vrc/site/default.asp" title="Visitors" class="noblock">Visitors</a></li>
+       				 </ul>
+			 </span>
+         	 <span class="dcFooterList">
+        		 <h4 class="dcFooterLabel">Community</h4>
+        			<ul>
+        				 <li><a target='_blank' href="http://app.calendar.dc.gov/dayView.aspx" title="Citywide Calendar" class="noblock">Citywide Calendar</a></li>
+        				 <li><a target='_blank' href="http://census.dc.gov" title="Census" class="noblock">Census</a></li>
+        				 <li><a target='_blank' href="http://dchr.dc.gov/dcop/cwp/view,a,1222,q,530365,dcopNav,|31656|.asp" title="DC Jobs" class="noblock">DC Jobs</a></li>
+        				 <li><a target='_blank' href="http://ocp.dc.gov" title="DC Procurement" class="noblock">DC Procurement</a></li>
+        				 <li><a target='_blank' href="http://green.dc.gov/green/site/default.asp" title="Green DC" class="noblock">Green DC</a></li>
+        				 <li><a target='_blank' href="http://dconecard.dc.gov" title="DC One Card" class="noblock">DC One Card</a></li>
+        				 <li><a target='_blank' href="http://ich.dc.gov/ich/site/default.asp" title="Interagency on Homelessness" class="noblock">Interagency on Homelessness</a></li>
+        				 <li><a target='_blank' href="http://recovery.dc.gov/recovery/site/default.asp" title="Recovery.dc.gov" class="noblock">Recovery.dc.gov</a></li>
+        			</ul>
+        	</span>
+        	<span class="dcFooterList">
+        		<h4 class="dcFooterLabel">DC Government</h4>
+        			<ul>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Mayor" title="Mayor's Office" class="noblock">Mayor's Office</a></li>
+        				 <li><a target='_blank' href="http://app.dc.gov/agencies/index.asp" title="DC Agencies" class="noblock">DC Agencies</a></li>
+        				 <li><a target='_blank' href="http://www.dccouncil.washington.dc.us/" title="DC Council" class="noblock">DC Council</a></li>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Government/Elected+Officials+&+Elections" title="Elected Officials" class="noblock">Elected Officials</a></li>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Mayor/About+the+Mayor/Cabinet+Appointees" title="District Appointees" class="noblock">District Appointees</a></li>
+        				 <li><a target='_blank' href="http://capstat.oca.dc.gov/" title="CapStat" class="noblock">CapStat</a></li>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Government/DC+Courts+&+Laws" title="Courts" class="noblock">Courts</a></li>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Government/DC+Courts+&+Laws/DC+Laws" title="DC Laws" class="noblock">DC Laws</a></li>
+        				 <li><a target='_blank' href="http://statehood.dc.gov" title="DC Statehood" class="noblock">DC Statehood</a></li>
+        			</ul>
+        	</span>
+        	<span class="dcFooterList">
+        		<h4 class="dcFooterLabel">Contact Us</h4>
+        			<ul>
+        				 <li><a target='_blank' href="http://311.dc.gov" title="Call 311" class="noblock">Call 311</a></li>
+        				 <li><a target='_blank' href="http://app.dc.gov/apps/about.asp?page=atd&type=dsf&referrer=%5b$DSF_SERVER_NAME$%5d&agency_id=1075&portal_link=hr" title="Contact the Mayor" class="noblock">Contact the Mayor</a></li>
+        				 <li><a target='_blank' href="http://dc.gov/DC/Government/City+Transactions/Ask+the+Director" title="Contact Agency Directors" class="noblock">Contact Agency Directors</a></li>
+        				 <li><a target='_blank' href="http://feedback.dc.gov/" title="Send Feedback" class="noblock">Send Feedback</a></li>
+        				 <li><a target='_blank' href="http://app.dc.gov/agencies/agency_search.asp?portal_link=fc" title="Search Telephone Directory" class="noblock">Search Telephone Directory</a></li>
+        				 <li><a target='_blank' href="http://311.dc.gov" title="Submit Service Requests" class="noblock">Submit Service Requests</a></li>
+        				 <li><a target='_blank' href="http://foia.dc.gov" title="Make FOIA Requests" class="noblock">Make FOIA Requests</a></li>
+        			</ul>
+        	</span>
+        </div>
+        <div class="dcBar">
+            <br/>
+            <span class="dcFooterListLower">
+                <ul>
+        		    <li  class='dcFirstChild' ><a  href="http://dc.gov/DC/About+DC.Gov/Accessibility" title="Accessibility" class="noblock">Accessibility</a></li>
+   		 	        <li class="dcDivider">|</li>
+        		    <li ><a  href="http://dc.gov/DC/About+DC.Gov" title="About DC.Gov" class="noblock">About DC.Gov</a></li>
+        		    <li class="dcDivider">|</li>
+        		    <li ><a  href="http://about.dc.gov/index.asp?portal_link=hr" title="DC Guide" class="noblock">DC Guide</a></li>
+        		    <li class="dcDivider">|</li>
+        		    <li ><a  href="http://wifi.dc.gov/" title="Wi-Fi Hotspots" class="noblock">Wi-Fi Hotspots</a></li>
+        		    <li class="dcDivider">|</li>
+        		    <li ><a target='_blank' href="http://dc.gov/DC/About+DC.Gov/Feedback" title="Feedback" class="noblock">Feedback</a></li>
+        		    <li class="dcDivider">|</li>
+        		    <li ><a target='_blank' href="http://dc.gov/DC/About+DC.Gov/Privacy+and+Security" title="Privacy & Security" class="noblock">Privacy & Security</a></li>
+        		    <li class="dcDivider">|</li>
+        		    <li ><a target='_blank' href="http://dc.gov/DC/About+DC.Gov/Terms+and+Conditions" title="Terms & Conditions" class="noblock">Terms & Conditions</a></li>
+        	    </ul>
+            </span>
+        </div>
+    </div>
+    <!-- End Footer Section -->
+</dcfooter>
+    </body>
+</html>
+
+
+
+
+
+
+</body>
+</html>
