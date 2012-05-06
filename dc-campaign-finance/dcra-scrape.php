@@ -1,5 +1,8 @@
 <?php
-function dcra($username, $password, $search) {
+
+  include_once("simple_html_dom.php");
+
+  function dcra($username, $password, $search) {
   $tmp_fname = tempnam('/tmp', 'COOKIE');
 
   $curl_handle = curl_init ('https://corp.dcra.dc.gov/Account.aspx/LogOn');
@@ -52,7 +55,19 @@ function dcra($username, $password, $search) {
 
     $leaf_output = curl_exec($curl_handle);
     file_put_contents('dcra_corp.html', $leaf_output);
-    // I realize that this overwrites the file each time, but it's just for testing
+    
+    $leaf_output = str_get_html($leaf_output)->plaintext;
+    
+//  echo file_get_html('/Users/travismcarthur/git/Occupy-data-processing/dc-campaign-finance/dcra_corp.html')->plaintext;
+//    $html = file_get_html('/Users/travismcarthur/git/Occupy-data-processing/dc-campaign-finance/dcra_corp.html')->plaintext;
+  
+    $html = preg_replace("/\t/" , " ", $leaf_output);
+    $html = preg_replace("/(         )+/" , "<SEPARATOR>", $html);
+    $html = preg_replace("/<SEPARATOR>(\s)+/" , "<SEPARATOR>", $html);
+    $html = preg_replace("/(<SEPARATOR>)+/" , "<SEPARATOR>", $html);
+
+    $fp = fopen('data3.txt', 'a');
+    fwrite($fp, $html . "\r\n");
 
     echo $fullurl . "\n";
   }
