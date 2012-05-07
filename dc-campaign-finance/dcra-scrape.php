@@ -20,7 +20,7 @@
   curl_setopt($curl_handle, CURLOPT_POSTFIELDS, $login_fields);
 
   $login_output = curl_exec($curl_handle);
-  file_put_contents('login.html', $login_output);
+//  file_put_contents('login.html', $login_output);
 
   $curl_handle = curl_init ('https://corp.dcra.dc.gov/Home.aspx/ProcessRequest');
   curl_setopt($curl_handle, CURLOPT_COOKIEFILE, $tmp_fname);
@@ -39,7 +39,7 @@
   curl_setopt($curl_handle, CURLOPT_POSTFIELDS, $fields);
 
   $query_output = curl_exec($curl_handle);
-  file_put_contents('dcra.html', $query_output);
+//  file_put_contents('dcra.html', $query_output);
 
   preg_match_all("|/BizEntity.aspx(.*)\w+(?=\")|U",
     $query_output,
@@ -54,7 +54,7 @@
     curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
 
     $leaf_output = curl_exec($curl_handle);
-    file_put_contents('dcra_corp.html', $leaf_output);
+//    file_put_contents('dcra_corp.html', $leaf_output);
     
     $leaf_output = str_get_html($leaf_output)->plaintext;
     
@@ -66,7 +66,7 @@
     $html = preg_replace("/<SEPARATOR>(\s)+/" , "<SEPARATOR>", $html);
     $html = preg_replace("/(<SEPARATOR>)+/" , "<SEPARATOR>", $html);
 
-    $fp = fopen('data3.txt', 'a');
+    $fp = fopen('dcra_temp_data.txt', 'a');
     fwrite($fp, $html . "\r\n");
 
     echo $fullurl . "\n";
