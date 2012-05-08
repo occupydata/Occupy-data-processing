@@ -62,6 +62,8 @@
 //    $html = file_get_html('/Users/travismcarthur/git/Occupy-data-processing/dc-campaign-finance/dcra_corp.html')->plaintext;
   
     $html = preg_replace("/\t/" , " ", $leaf_output);
+	$html = preg_replace("/\r/" , " ", $html);
+	$html = preg_replace("/\n/" , " ", $html);
     $html = preg_replace("/(         )+/" , "<SEPARATOR>", $html);
     $html = preg_replace("/<SEPARATOR>(\s)+/" , "<SEPARATOR>", $html);
     $html = preg_replace("/(<SEPARATOR>)+/" , "<SEPARATOR>", $html);

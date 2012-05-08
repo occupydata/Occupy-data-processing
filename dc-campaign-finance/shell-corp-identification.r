@@ -30,8 +30,6 @@
 
 library("stringr")
 
-contribs.df$contribution.id<-1:nrow(contribs.df)
-
 contribs.df$same.address.shell.flag<-FALSE
 contribs.df$max.contrib.shell.flag<-FALSE
 contribs.df$contrib.timing.shell.flag<-FALSE
@@ -88,7 +86,6 @@ map.races<-c(
 
 all.committees<-unique(contribs.df$Committee.Name)
 
-target.races<-map.races[3]
 
 for (target.races in map.races) {
 	
@@ -299,6 +296,9 @@ for (target.races in map.races) {
 	write.csv(shell.dbf, file=paste(work.dir, "shell points time criteria ", target.races, ".csv", sep=""), row.names=FALSE)
 	
 }
+
+### This point is where it is saved
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after shell ID.Rdata", sep=""))
 
 
 write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )

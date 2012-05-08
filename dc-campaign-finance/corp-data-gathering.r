@@ -1,8 +1,25 @@
+# Copyright (c) 2012 Data Committee of Occupy DC
+# 	
+# Permission is hereby granted, free of charge, to any person obtaining a copy of 
+# this software and associated documentation files (the "Software"), to deal in 
+# the Software without restriction, including without limitation the rights to 
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+# of the Software, and to permit persons to whom the Software is furnished to do 
+# so, subject to the following conditions:
+# 	
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# Contact: data at occupydc dot org
 
-
-contribs.df
-
-target.corp
 
 
 
@@ -100,25 +117,37 @@ parse.dcra<-function(x) {
 	ret.df$suffix2<-gsub("^Suffix", "", 
 											 x[grep("^Date of Organization[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}", x)+3])
 	
-	business.addr.v<-x[
-		which(x=="Business Address"):grep("Is non-commercial Registered Agent", x)]
+	if (all(x!="Business Address data not found.")) {
 	
-	ret.df$bus.addr.line.1<-business.addr.v[which(business.addr.v=="Line1")+1]
+		business.addr.v<-x[
+			which(x=="Business Address"):grep("Is non-commercial Registered Agent", x)]
+		
+		ret.df$bus.addr.line.1<-business.addr.v[which(business.addr.v=="Line1")+1]
+		
+		temp.v<-business.addr.v[which(business.addr.v=="Line2")+1]
+		
+		#	cat(business.addr.v, sep="\n")
+		
+		if (temp.v=="City") {
+			ret.df$bus.addr.line.2<-""
+		} else {
+			ret.df$bus.addr.line.2<-temp.v
+		}
+		
+		ret.df$bus.addr.city<-business.addr.v[which(business.addr.v=="City")+1]
+		ret.df$bus.addr.state<-business.addr.v[which(business.addr.v=="State")+1]
+		ret.df$bus.addr.zip<-business.addr.v[which(business.addr.v=="Zip")+1]
 	
-	temp.v<-business.addr.v[which(business.addr.v=="Line2")+1]
-	
-	#	cat(business.addr.v, sep="\n")
-	
-	if (temp.v=="City") {
-		ret.df$bus.addr.line.2<-""
 	} else {
-		ret.df$bus.addr.line.2<-temp.v
+	
+		ret.df$bus.addr.line.1<-""
+		ret.df$bus.addr.line.2<-""
+		ret.df$bus.addr.city<-""
+		ret.df$bus.addr.state<-""
+		ret.df$bus.addr.zip<-""
+		
 	}
-	
-	ret.df$bus.addr.city<-business.addr.v[which(business.addr.v=="City")+1]
-	ret.df$bus.addr.state<-business.addr.v[which(business.addr.v=="State")+1]
-	ret.df$bus.addr.zip<-business.addr.v[which(business.addr.v=="Zip")+1]
-	
+		
 	reg.agent.v<-x[which(x=="Agent"):which(x=="Report List")]
 	
 	ret.df$is.non.comm.reg.agent<-gsub("^Is non-commercial Registered Agent[?]", "", 
@@ -160,17 +189,21 @@ parse.dcra<-function(x) {
 	
 }
 
-contribs.df$contribution.id
+
+suspected.bundled.contrib.ids<-contribs.df$contribution.id[contribs.df$contrib.timing.shell.flag]
+
+# suspected.bundled.contrib.ids<-suspected.bundled.contrib.ids[1:10]
+# target.contrib<-suspected.bundled.contrib.ids[3]
 
 dcra.data.to.merge.ls<-list()
 
-# for (target.contrib in suspected.bundled.contrib.ids) {
+for (target.contrib in suspected.bundled.contrib.ids) {
 
-# target.corp<-contribs.df$Contributor[contribution.id==target.contrib]
+target.corp<-contribs.df$Contributor[contribs.df$contribution.id==target.contrib]
 
-target.contrib<-100
+#target.contrib<-100
 
-target.corp<-"Big Bear, LLC"
+#target.corp<-"Big Bear, LLC"
 
 target.corp.query<-gsub("[[:punct:]]", " ",  target.corp)
 target.corp.query<-gsub("[[:space:]]+", " ",  target.corp.query)
@@ -188,13 +221,30 @@ cat(target.corp.query, file=paste(code.dir, "dcraQuery.txt", sep=""))
 system(paste("cd ", "\"", code.dir, "\"", "\n", "php ", "\"", code.dir, "dcra-scrape.php\"", sep=""), ignore.stdout = TRUE, ignore.stderr = TRUE)
 
 
-scrape.output.v<-readLines(paste(code.dir, "dcra_temp_data.txt", sep=""))
+scrape.output.v<-tryCatch(scrape.output.v<-readLines(paste(code.dir, "dcra_temp_data.txt", sep="")),
+				 error = function(e) { "No results" })
+
+if (all(scrape.output.v=="No results") ) {
+
+	target.corp.query.first.two.words<-str_extract_all(
+	  target.corp.query, "^[[:alnum:]]+ [[:alnum:]]+")[[1]]
+	
+	cat(target.corp.query.first.two.words, file=paste(code.dir, "dcraQuery.txt", sep=""))
+	
+	system(paste("cd ", "\"", code.dir, "\"", "\n", "php ", "\"", code.dir, "dcra-scrape.php\"", sep=""), ignore.stdout = TRUE, ignore.stderr = TRUE)
+	
+	scrape.output.v<-tryCatch(scrape.output.v<-readLines(paste(code.dir, "dcra_temp_data.txt", sep="")),
+    error = function(e) { "No results" })
+	
+	if (all(scrape.output.v=="No results") ) { next }
+
+}
 
 unlink(paste(code.dir, "dcra_temp_data.txt", sep=""))
 
-scrape.output.v<-strsplit(scrape.output.v, "<SEPARATOR>")
+scrape.output.ls<-strsplit(scrape.output.v, "<SEPARATOR>")
 
-scrape.output.ls<-lapply(scrape.output.v, parse.dcra)
+scrape.output.ls<-lapply(scrape.output.ls, parse.dcra)
 
 scrape.output.df<-do.call(rbind, scrape.output.ls)
 
@@ -219,8 +269,8 @@ for ( i in 1:nrow(scrape.output.df)) {
 }
 
 scrape.output.df$likely.match<-
-  scrape.output.df$birth.date <= contribs.df$Date.of.Receipt[contribution.id==target.contrib] &
-  scrape.output.df$death.date >= contribs.df$Date.of.Receipt[contribution.id==target.contrib]
+  scrape.output.df$birth.date <= contribs.df$Date.of.Receipt[contribs.df$contribution.id==target.contrib] &
+  scrape.output.df$death.date >= contribs.df$Date.of.Receipt[contribs.df$contribution.id==target.contrib]
 
 scrape.output.df$likely.match[is.na(scrape.output.df$likely.match)]<-TRUE
 
@@ -248,8 +298,16 @@ scrape.output.df$contribution.id<-target.contrib
 #		scrape.output.df[sample(which(scrape.output.df$chosen.match), size=1), ]
 #}
 
+}
 
+dcra.data.to.merge.df<-do.call(rbind, dcra.data.to.merge.ls)
 
+colnames(dcra.data.to.merge.df)<-paste("DCRA.", colnames(dcra.data.to.merge.df), sep="")
+
+colnames(dcra.data.to.merge.df)[
+  colnames(dcra.data.to.merge.df)=="DCRA.contribution.id"]<-"contribution.id"
+
+merge.test.df<-merge(contribs.df, dcra.data.to.merge.df)
 
 
 Date.of.Receipt

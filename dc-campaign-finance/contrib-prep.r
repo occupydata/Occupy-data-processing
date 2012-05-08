@@ -317,7 +317,7 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
 # geocode.output.ls<-geocode.output.ls[1:31441]
 successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
   if(is.data.frame(x)) {
-    ret<-ncol(x)==124
+    ret<-ncol(x)==123
   } else {
     ret<-FALSE
   } 
@@ -325,7 +325,7 @@ successful.geocode.v<-sapply(geocode.output.ls, FUN=function(x) {
 
 # geocode.output.ls<-lapply(geocode.output.ls, FUN=function(x) { if (is.data.frame(x) && ncol(x)==124) {x[, 1]<-as.character(x[, 1])}; x})
 
-geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=124, byrow=TRUE)
+geocode.output.mat<-matrix(unlist(geocode.output.ls[successful.geocode.v]), ncol=123, byrow=TRUE)
 # geocode.output.mat<-geocode.output.mat[, -2]
 USA.geocode.output.df<-as.data.frame(geocode.output.mat, stringsAsFactors=FALSE)
 
@@ -450,6 +450,8 @@ dim(contribs.geocoded.df)[1]==dim(contribs.raw.df)[1]
 
 contribs.df<-contribs.geocoded.df
 
+rm(contribs.geocoded.df)
+
 contribs.df$address.is.unclean<-!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder
 
 contribs.df$address.clean[!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder]<-
@@ -474,9 +476,9 @@ contribs.df$longitude.consolidated[!contribs.df$USA.geocoder]<-
   contribs.df$DC.geocoder.LONGITUDE[!contribs.df$USA.geocoder]
 
 contribs.df$latitude.consolidated[contribs.df$USA.geocoder]<-
-  contribs.df$Latitude[contribs.df$USA.geocoder]
+  contribs.df$USA.geocoder.Latitude[contribs.df$USA.geocoder]
 contribs.df$longitude.consolidated[contribs.df$USA.geocoder]<-
-  contribs.df$Longitude[contribs.df$USA.geocoder]
+  contribs.df$USA.geocoder.Longitude[contribs.df$USA.geocoder]
 
 contribs.df$latitude.consolidated[contribs.df$latitude.consolidated==0]<-NA
 contribs.df$longitude.consolidated[contribs.df$longitude.consolidated==0]<-NA
@@ -535,6 +537,11 @@ address.dups.v<-duplicated(contribs.df$address.clean) | duplicated(contribs.df$a
 
 address.dups.v<-unique(contribs.df$address.clean[address.dups.v])
 
+
+#######################
+# BEGIN TRIGRAM PROCESSOR
+#######################
+
 library(compiler)
 
 fix.inconsistent.text <- cmpfun(fix.inconsistent.text)
@@ -567,6 +574,10 @@ for ( i in address.dups.v) {
 
 }
 Sys.time()
+
+#######################
+# END TRIGRAM PROCESSOR
+#######################
 
 
 install.packages("maptools")
@@ -616,7 +627,7 @@ committees.same.name.df<-committees.df[duplicated(committees.df$Committee.Name) 
 committees.same.name.df<-committees.same.name.df[!duplicated(committees.same.name.df[, c("Committee.Name", "year")], fromLast=TRUE) & 
   !duplicated(committees.same.name.df[, c("Committee.Name", "year")]), ]
 
-contribs.save.df<-contribs.df
+#contribs.save.df<-contribs.df
 
 contribs.df$Committee.Name[contribs.df$Committee.Name=="Re-Elect Jim Graham  (2006)"]<-
   "Re-Elect Jim Graham (2006)"
@@ -676,14 +687,13 @@ contribs.df$contributor.recipient.same.geo<-contribs.df$recipient.ward==contribs
 contribs.df$contributor.recipient.same.geo[contribs.df$contributor.ward!="Non-DC" &
 	contribs.df$recipient.ward=="Citywide"]<-TRUE
 
-### This point is where it is saved
-# save(contribs.df, file=paste(work.dir, "Geocoded contribs df.Rdata", sep=""))
-# save(committees.df, file=paste(work.dir, "committees finished df.Rdata", sep=""))
 
 
+install.packages("reshape")
 install.packages("foreign")
 
 library(foreign)
+library(reshape)
 
 download.file("http://dcatlas.dcgis.dc.gov/download/CamaCommPt.ZIP", 
 							paste(work.dir, "raw/CamaCommPt.ZIP", sep="") )
@@ -778,14 +788,21 @@ contribs.df<-merge(contribs.df, cama.df, all.x=TRUE)
 			
 rm(cama.df)
 
-table(
-contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL
+
+### This point is where it is saved
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1.Rdata", sep=""))
+# save(committees.df, file=paste(work.dir, "committees finished df may 1.Rdata", sep=""))
+
+
+
+#table(
+# contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL
 )
 
-contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)][!contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL][1:50]
+#contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)][!contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL][1:50]
 
-cama.df$SSL[grepl("^3634", cama.df$SSL)]
-3634
+#cama.df$SSL[grepl("^3634", cama.df$SSL)]
+#3634
 
 
 
