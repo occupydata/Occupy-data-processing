@@ -117,10 +117,11 @@ parse.dcra<-function(x) {
 	ret.df$suffix2<-gsub("^Suffix", "", 
 											 x[grep("^Date of Organization[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}", x)+3])
 	
+	
 	if (all(x!="Business Address data not found.")) {
 	
 		business.addr.v<-x[
-			which(x=="Business Address"):grep("Is non-commercial Registered Agent", x)]
+			which(x=="Business Address"):grep("(Is non-commercial Registered Agent)|(Registered Agent data not found[.])", x)[1]]
 		
 		ret.df$bus.addr.line.1<-business.addr.v[which(business.addr.v=="Line1")+1]
 		
@@ -147,14 +148,24 @@ parse.dcra<-function(x) {
 		ret.df$bus.addr.zip<-""
 		
 	}
+	
+	if (any(x=="Registered Agent data not found.")) {
+		
+		ret.df[sapply(ret.df, length)!=1]<-""
+		
+		ret.df<-as.data.frame(ret.df, stringsAsFactors=FALSE)
+		
+		return(ret.df)
+		
+	}
 		
 	reg.agent.v<-x[which(x=="Agent"):which(x=="Report List")]
 	
 	ret.df$is.non.comm.reg.agent<-gsub("^Is non-commercial Registered Agent[?]", "", 
-																		 reg.agent.v[grepl("^Is non-commercial Registered Agent[?]", reg.agent.v)])
+	  reg.agent.v[grepl("^Is non-commercial Registered Agent[?]", reg.agent.v)])
 	
 	ret.df$reg.agent.name<-gsub("^Name", "", 
-															reg.agent.v[grepl("^Name[A-Za-z]", reg.agent.v)])
+	  reg.agent.v[grepl("^Name[A-Za-z]", reg.agent.v)])
 	
 	ret.df$reg.agent.addr.line.1<-reg.agent.v[which(reg.agent.v=="Line1")+1]
 	
@@ -205,7 +216,8 @@ target.corp<-contribs.df$Contributor[contribs.df$contribution.id==target.contrib
 
 #target.corp<-"Big Bear, LLC"
 
-target.corp.query<-gsub("[[:punct:]]", " ",  target.corp)
+target.corp.query<-gsub(",", " ",  target.corp)
+target.corp.query<-gsub("[[:punct:]]", "",  target.corp)
 target.corp.query<-gsub("[[:space:]]+", " ",  target.corp.query)
 target.corp.query<-gsub("(^[[:space:]]+)|([[:space:]]+$)", "",  target.corp.query)
 
@@ -298,7 +310,11 @@ scrape.output.df$contribution.id<-target.contrib
 #		scrape.output.df[sample(which(scrape.output.df$chosen.match), size=1), ]
 #}
 
+cat(target.corp, "\n")
+
 }
+
+
 
 dcra.data.to.merge.df<-do.call(rbind, dcra.data.to.merge.ls)
 

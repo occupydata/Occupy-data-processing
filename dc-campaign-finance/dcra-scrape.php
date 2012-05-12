@@ -45,6 +45,12 @@
     $query_output,
     $out, PREG_PATTERN_ORDER);
 
+  echo count($out[0]);
+	  
+  if (count($out[0])>20) {
+	  exit('Greater than 20 results, so exit');
+  }
+
   foreach ($out[0] as $leafurl) {
 
     $fullurl = "https://corp.dcra.dc.gov" . $leafurl;

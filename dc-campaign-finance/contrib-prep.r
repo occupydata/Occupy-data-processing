@@ -501,7 +501,11 @@ contribs.df$Contribution.Type[contribs.df$Contribution.Type=="individual"]<-"Ind
 contribs.df$contributor.clean<-contribs.df$Contributor
 
 contribs.df$contributor.clean<-gsub(",( )*,", ",", contribs.df$contributor.clean)
+contribs.df$contributor.clean<-gsub("( ){2,}", " ", contribs.df$contributor.clean)
+contribs.df$contributor.clean<-gsub("(\t+)|(\n+)", " ", contribs.df$contributor.clean)
 contribs.df$contributor.clean<-gsub("(^ +)|( +$)", "", contribs.df$contributor.clean)
+contribs.df$contributor.clean<-gsub(" [Ii][Nn][Cc]$", " Inc.", contribs.df$contributor.clean)
+
 
 indiv.sep.ls<-strsplit(contribs.df$contributor.clean, ",")
 
@@ -529,54 +533,74 @@ contribs.df$contributor.spouse.2[contribs.df$Contribution.Type=="Individual" & g
 contribs.df$contributor.first.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.first.name)
 contribs.df$contributor.last.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.last.name)
 contribs.df$contributor.spouse.1<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)
-contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)			
+contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.2)			
 
 
-address.dups.v<-duplicated(contribs.df$address.clean) | duplicated(contribs.df$address.clean, fromLast=TRUE) 
-# | duplicated(contribs.df$DC.geocoder.ADDRESS_ID) | duplicated(contribs.df$DC.geocoder.ADDRESS_ID, fromLast=TRUE)
-
-address.dups.v<-unique(contribs.df$address.clean[address.dups.v])
 
 
 #######################
-# BEGIN TRIGRAM PROCESSOR
+# BEGIN INCONSISTENT NAME FIXER
 #######################
 
-library(compiler)
+# input should be: contribs.df[, c("address.clean", "contributor.clean", "contribution.id")]
 
-fix.inconsistent.text <- cmpfun(fix.inconsistent.text)
+# Dependencies: RecordLinkage, network, igraph
 
-# address.dups.v<-address.dups.v[1:10]
-Sys.time()
-for ( i in address.dups.v) {
+install.packages("RecordLinkage")
+install.packages("network")
+install.packages("igraph")
 
-  target.rows<-which(!is.na(contribs.df$address.clean) & contribs.df$address.clean==i)
-  
-  if (length(which(!is.na(contribs.df$contributor.clean[target.rows]) &
-  	!duplicated(contribs.df$contributor.clean[target.rows])))>1) {
-	contribs.df$contributor.clean[target.rows]<-
-	  fix.inconsistent.text(contribs.df$contributor.clean[target.rows])$consistent
-  }
+library(RecordLinkage)
+library(network)
+library(igraph)
+
+#test.df<-data.frame(incorrect=c("az", "aa", "bz", "bb"), correct=c("aa", "aa", "bb", "bb"), stringsAsFactors=FALSE)
+
+#test.v<-sample(c("az", "aa", "bz", "bb"))
+#test.v
+#test.v[match( test.df[, 1], test.v)]<-test.df[, 2]
+#test.v
+
+source(paste(code.dir, "fix-inconsistent-names.r", sep=""))
+
+all.contrib.types<-unique(contribs.df$Contribution.Type)
+all.contrib.types<-all.contrib.types[!all.contrib.types %in% c("Corporation", "Business", "Partnership")]
+
+for ( target.type in all.contrib.types) {
 	
-	if (length(which(!is.na(contribs.df$contributor.last.name[target.rows]) &
-	  !duplicated(contribs.df$contributor.last.name[target.rows])))>1) {
-	contribs.df$contributor.last.name[target.rows]<-
-		fix.inconsistent.text(contribs.df$contributor.last.name[target.rows])$consistent
-	}
-	
-	if (length(which(!is.na(contribs.df$contributor.first.name[target.rows]) &
-  	!duplicated(contribs.df$contributor.first.name[target.rows])))>1) {
-	contribs.df$contributor.first.name[target.rows]<-
-		fix.inconsistent.text(contribs.df$contributor.first.name[target.rows])$consistent
-	}
-	
-	# TO DO: fix inconsistent text in spouses
+	fixed.temp.df<-fix.inconsistent.contrib.names(
+	  contribs.df[contribs.df$Contribution.Type==target.type, 
+	    c("address.clean", "contributor.clean", "contribution.id")])
+
+	contribs.df$contributor.clean[
+	  match(fixed.temp.df$contribution.id, contribs.df$contribution.id)]<-
+	  	fixed.temp.df$contributor.replacement
 
 }
-Sys.time()
+
+fixed.temp.df<-fix.inconsistent.contrib.names(
+	contribs.df[contribs.df$Contribution.Type %in% c("Corporation", "Business", "Partnership"), 
+	  c("address.clean", "contributor.clean", "contribution.id")])
+
+contribs.df$contributor.clean[
+	match(fixed.temp.df$contribution.id, contribs.df$contribution.id)]<-
+		fixed.temp.df$contributor.replacement
+
+for (name.part in c("contributor.first.name", "contributor.last.name", "contributor.spouse.2", "contributor.spouse.1")) {
+
+  fixed.temp.df<-fix.inconsistent.contrib.names(
+  	contribs.df[contribs.df$Contribution.Type=="Individual" & !is.na(contribs.df[, name.part]), 
+  	  c("address.clean", name.part, "contribution.id")])
+
+  contribs.df[match(fixed.temp.df$contribution.id, contribs.df$contribution.id), name.part]<-
+		fixed.temp.df$contributor.replacement
+
+}
+
+
 
 #######################
-# END TRIGRAM PROCESSOR
+# END INCONSISTENT NAME FIXER
 #######################
 
 
@@ -787,6 +811,16 @@ colnames(cama.df)[colnames(cama.df)=="DC.property.SSL"]<-"DC.geocoder.SSL"
 contribs.df<-merge(contribs.df, cama.df, all.x=TRUE)
 			
 rm(cama.df)
+
+contribs.df$multiunit.building<-contribs.df$DC.property.NUM_UNITS>1 &
+  !is.na(contribs.df$DC.property.NUM_UNITS)
+
+contribs.df$unit.criteria.shell.flag <- !contribs.df$multiunit.building |
+  (!is.na(contribs.df$USA.geocoder.PSuiteNumber.cleaned) | 
+	contribs.df$perl_parsed_sec_unit_num!="" |
+	!is.na(contribs.df$DC.geocoder.UNITNUMBER) )
+
+
 
 
 ### This point is where it is saved
