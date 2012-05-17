@@ -31,7 +31,7 @@
     'BizEntitySearch_String'=>$search, 
     'Search'=>'Search',
     'BizEntitySearch_Type'=>'EntityName',
-    'BizEntitySearch_DepthType'=>'Contains',
+    'BizEntitySearch_DepthType'=>'StartsWith',
     'BizEntitySearch_EntityStatus'=>'',
     'BizEntitySearch_TradeNameStatus'=>''
   );

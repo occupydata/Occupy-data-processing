@@ -454,6 +454,8 @@ rm(contribs.geocoded.df)
 
 contribs.df$address.is.unclean<-!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder
 
+# TO DO: indicator for "unclean" data in "clean" address columns
+
 contribs.df$address.clean[!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder]<-
 	contribs.df$perl_parsed_combined_no_city[!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder]
 
@@ -465,7 +467,27 @@ contribs.df$city.clean[is.na(contribs.df$city.clean)]<-contribs.df$city[is.na(co
 contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$perl_parsed_state[is.na(contribs.df$state.clean)]
 contribs.df$zip.clean[is.na(contribs.df$zip.clean)]<-contribs.df$Zip[is.na(contribs.df$zip.clean)]
 
-# TO DO: indicator for "unclean" data in "clean" address columns
+
+unit.nums.to.fix.v<-str_extract(contribs.df$address.clean, " [^ ]+ [0-9]+-?[A-Za-z]?$")
+no.units.index<-is.na(unit.nums.to.fix.v)
+unit.nums.to.fix.v<-unit.nums.to.fix.v[!no.units.index]
+
+unit.nums.to.fix.v<-gsub("( # )|( APARTMENT )|( APT )|( DEPT )|( FL )|( FLOOR )|( NO )|( STE )|( SUITE )|( UNIT )", " No. ", unit.nums.to.fix.v)
+
+contribs.df$address.clean<-gsub(" [^ ]+ [0-9]+-?[A-Za-z]?$", "", contribs.df$address.clean)
+
+contribs.df$address.clean[!no.units.index]<-paste(contribs.df$address.clean[!no.units.index],
+  unit.nums.to.fix.v, sep="")
+
+contribs.df$address.no.unit.clean<-gsub(" No[.] [0-9]+[A-Za-z]?$", "", contribs.df$address.clean)
+
+contribs.df$address.evidence.multiunit.building<-FALSE
+
+inconsist.no.unit.v<-contribs.df$address.no.unit.clean[contribs.df$address.no.unit.clean!=contribs.df$address.clean]
+
+contribs.df$address.evidence.multiunit.building[
+	contribs.df$address.no.unit.clean %in% unique(inconsist.no.unit.v)]<-TRUE
+
 
 contribs.df$latitude.consolidated<-NA
 contribs.df$longitude.consolidated<-NA
@@ -494,9 +516,14 @@ contribs.df$longitude.consolidated[contribs.df$longitude.consolidated==0]<-NA
 #########################
 
 
-contribs.df$Contribution.Type[contribs.df$Contribution.Type=="Corp"]<-"Corporation"
-contribs.df$Contribution.Type[contribs.df$Contribution.Type=="Individual "]<-"Individual"
-contribs.df$Contribution.Type[contribs.df$Contribution.Type=="individual"]<-"Individual"
+contribs.df$contribution.type.clean<-contribs.df$Contribution.Type
+
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Corp"]<-"Corporation"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Business"]<-"Corporation"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Individual "]<-"Individual"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="individual"]<-"Individual"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Labor Org"]<-"Labor"
+
 
 contribs.df$contributor.clean<-contribs.df$Contributor
 
@@ -507,33 +534,7 @@ contribs.df$contributor.clean<-gsub("(^ +)|( +$)", "", contribs.df$contributor.c
 contribs.df$contributor.clean<-gsub(" [Ii][Nn][Cc]$", " Inc.", contribs.df$contributor.clean)
 
 
-indiv.sep.ls<-strsplit(contribs.df$contributor.clean, ",")
 
-contribs.df$contributor.first.name<-NA
-contribs.df$contributor.last.name<-NA
-
-contribs.df$contributor.first.name[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
-	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[2]})
-
-contribs.df$contributor.last.name[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
-	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
-
-contribs.df$contributor.spouse.1<-NA
-contribs.df$contributor.spouse.2<-NA
-
-
-indiv.sep.ls<-strsplit(contribs.df$contributor.first.name, "(&)|( [aA][nN][dD] )")
-
-contribs.df$contributor.spouse.1[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
-	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
-
-contribs.df$contributor.spouse.2[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
-	sapply(indiv.sep.ls[contribs.df$Contribution.Type=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
-
-contribs.df$contributor.first.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.first.name)
-contribs.df$contributor.last.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.last.name)
-contribs.df$contributor.spouse.1<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)
-contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.2)			
 
 
 
@@ -563,13 +564,13 @@ library(igraph)
 
 source(paste(code.dir, "fix-inconsistent-names.r", sep=""))
 
-all.contrib.types<-unique(contribs.df$Contribution.Type)
-all.contrib.types<-all.contrib.types[!all.contrib.types %in% c("Corporation", "Business", "Partnership")]
+all.contrib.types<-unique(contribs.df$contribution.type.clean)
+all.contrib.types<-all.contrib.types[!all.contrib.types %in% c("Corporation", "Partnership")]
 
 for ( target.type in all.contrib.types) {
 	
 	fixed.temp.df<-fix.inconsistent.contrib.names(
-	  contribs.df[contribs.df$Contribution.Type==target.type, 
+	  contribs.df[contribs.df$contribution.type.clean==target.type, 
 	    c("address.clean", "contributor.clean", "contribution.id")])
 
 	contribs.df$contributor.clean[
@@ -579,23 +580,23 @@ for ( target.type in all.contrib.types) {
 }
 
 fixed.temp.df<-fix.inconsistent.contrib.names(
-	contribs.df[contribs.df$Contribution.Type %in% c("Corporation", "Business", "Partnership"), 
-	  c("address.clean", "contributor.clean", "contribution.id")])
+	contribs.df[contribs.df$contribution.type.clean %in% c("Corporation", "Partnership"), 
+	  c("address.clean", "contributor.clean", "contribution.id")], corps=TRUE)
 
 contribs.df$contributor.clean[
 	match(fixed.temp.df$contribution.id, contribs.df$contribution.id)]<-
 		fixed.temp.df$contributor.replacement
 
-for (name.part in c("contributor.first.name", "contributor.last.name", "contributor.spouse.2", "contributor.spouse.1")) {
+#for (name.part in c("contributor.first.name", "contributor.last.name", "contributor.spouse.2", "contributor.spouse.1")) {
 
-  fixed.temp.df<-fix.inconsistent.contrib.names(
-  	contribs.df[contribs.df$Contribution.Type=="Individual" & !is.na(contribs.df[, name.part]), 
-  	  c("address.clean", name.part, "contribution.id")])
+#  fixed.temp.df<-fix.inconsistent.contrib.names(
+#  	contribs.df[contribs.df$Contribution.Type=="Individual" & !is.na(contribs.df[, name.part]), 
+#  	  c("address.clean", name.part, "contribution.id")])
 
-  contribs.df[match(fixed.temp.df$contribution.id, contribs.df$contribution.id), name.part]<-
-		fixed.temp.df$contributor.replacement
+#  contribs.df[match(fixed.temp.df$contribution.id, contribs.df$contribution.id), name.part]<-
+#		fixed.temp.df$contributor.replacement
 
-}
+#}
 
 
 
@@ -604,38 +605,38 @@ for (name.part in c("contributor.first.name", "contributor.last.name", "contribu
 #######################
 
 
-install.packages("maptools")
-install.packages("splancs")
-install.packages("PBSmapping")
+indiv.sep.ls<-strsplit(contribs.df$contributor.clean, ",")
 
-library("maptools")
-library("splancs")
-library("PBSmapping")
+contribs.df$contributor.first.name<-NA
+contribs.df$contributor.last.name<-NA
 
-ward.shps<-importShapefile(paste(work.dir,"Ward02Ply.shp", sep=""))
+contribs.df$contributor.first.name[contribs.df$contribution.type.clean=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$contribution.type.clean=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[2]})
+
+contribs.df$contributor.last.name[contribs.df$contribution.type.clean=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$contribution.type.clean=="Individual" & grepl( ",", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
+
+contribs.df$contributor.spouse.1<-NA
+contribs.df$contributor.spouse.2<-NA
 
 
-contribs.event<-contribs.df[!duplicated(contribs.df$geocode.id) & 
-	!is.na(contribs.df$longitude.consolidated), c("geocode.id", "longitude.consolidated", "latitude.consolidated")]
-colnames(contribs.event)<-c("EID", "X", "Y")
-contribs.event$X<-as.numeric(contribs.event$X)
-contribs.event$Y<-as.numeric(contribs.event$Y)
-contribs.event<-as.EventData(contribs.event)
+indiv.sep.ls<-strsplit(contribs.df$contributor.first.name, "(&)|( [aA][nN][dD] )")
 
-contribs.in.wards<-findPolys(contribs.event, ward.shps)
+contribs.df$contributor.spouse.1[contribs.df$contribution.type.clean=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$contribution.type.clean=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
 
-contribs.matched.ward.df<-data.frame(
-	geocode.id=contribs.in.wards$EID,
-	contributor.ward=attr(ward.shps, "PolyData")$NAME[contribs.in.wards$PID]
-	)
+contribs.df$contributor.spouse.2[contribs.df$contribution.type.clean=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2]<-
+	sapply(indiv.sep.ls[contribs.df$contribution.type.clean=="Individual" & grepl( "(&)|( [aA][nN][dD] )", contribs.df$contributor.clean) & sapply(indiv.sep.ls, FUN=length)==2], FUN=function(x) {x[1]})
 
-contribs.matched.ward.df$contributor.ward<-as.character(contribs.matched.ward.df$contributor.ward)
-contribs.matched.ward.df$contributor.ward<-
-	gsub("(Ward )|( [(][0-9]*[)])", "", contribs.matched.ward.df$contributor.ward)
+contribs.df$contributor.first.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.first.name)
+contribs.df$contributor.last.name<-gsub("(^ +)|( +$)", "", contribs.df$contributor.last.name)
+contribs.df$contributor.spouse.1<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.1)
+contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributor.spouse.2)
 
-contribs.df<-merge(contribs.df, contribs.matched.ward.df, all.x=TRUE)
 
-contribs.df$contributor.ward[is.na(contribs.df$contributor.ward)]<-"Non-DC"
+
+
+
 
 
 
@@ -643,6 +644,7 @@ committees.df<-read.delim(paste(work.dir,"DC candidate committees.tsv", sep=""),
 
 colnames(committees.df)[colnames(committees.df)=="committee"]<-"Committee.Name"
 colnames(committees.df)[colnames(committees.df)=="office"]<-"electoral.office"
+
 
 committees.df[committees.df$Committee.Name=="Committee to Elect Cardell Shelton", ]
 
@@ -688,7 +690,104 @@ committees.df<-rbind(committees.df, committees.same.name.df)
 
 committees.df<-committees.df[!duplicated(committees.df$Committee.Name), ]
 
-contribs.df<-merge(contribs.df, committees.df[, c("Committee.Name", "electoral.office")], all.x=TRUE)
+contribs.df<-merge(contribs.df, committees.df[, c("Committee.Name", "candidate", "electoral.office", "year", "party", "organization_date")], all.x=TRUE)
+
+colnames(contribs.df)[colnames(contribs.df)=="year"]<-"election.cycle"
+colnames(contribs.df)[colnames(contribs.df)=="party"]<-"candidate.party"
+colnames(contribs.df)[colnames(contribs.df)=="organization_date"]<-"candidate.committee.organization.date"
+
+
+
+
+
+
+install.packages("maptools")
+install.packages("splancs")
+install.packages("PBSmapping")
+install.packages("sp")
+setRepositories(ind=1:2)
+install.packages("rgdal")
+
+
+library("maptools")
+library("splancs")
+library("PBSmapping")
+library("rgdal")
+library("sp")
+
+
+
+download.file(
+	"http://dcatlas.dcgis.dc.gov/download/WardPly.zip",
+	paste(work.dir, "WardPly.zip", sep="")
+	)
+# http://data.dc.gov/Main_DataCatalog.aspx?id=2860
+
+unzip( paste(work.dir, "WardPly.zip", sep=""), exdir=paste(work.dir, "raw/", sep="") )
+
+ward.12.ogr<-readOGR(paste(work.dir, "raw/WardPly.shp", sep=""), layer="WardPly")
+
+ward.12.shps<-importShapefile(paste(work.dir, "raw/WardPly.shp", sep=""))
+coords.to.convert<-as.data.frame(ward.12.shps[, c("X", "Y")])
+coordinates(coords.to.convert)<-~ X + Y # where X and Y stand for the name of your  lat/lon columns
+proj4string(coords.to.convert)<-ward.12.ogr@proj4string
+coords.to.convert<-spTransform(coords.to.convert, CRS("+proj=longlat +datum=WGS84"))
+ward.12.shps[, c("X", "Y")]<-coords.to.convert@coords
+
+contribs.event<-contribs.df[!duplicated(contribs.df$geocode.id) & 
+	!is.na(contribs.df$longitude.consolidated) & (contribs.df$election.cycle==2012 & !is.na(contribs.df$election.cycle)), c("geocode.id", "longitude.consolidated", "latitude.consolidated")]
+colnames(contribs.event)<-c("EID", "X", "Y")
+contribs.event$X<-as.numeric(contribs.event$X)
+contribs.event$Y<-as.numeric(contribs.event$Y)
+contribs.event<-as.EventData(contribs.event)
+
+contribs.in.wards.2012<-findPolys(contribs.event, ward.shps)
+
+
+
+download.file(
+	"http://dcatlas.dcgis.dc.gov/download/Ward02Ply.zip",
+	paste(work.dir, "Ward02Ply.zip", sep="")
+	)
+# See http://data.dc.gov/Metadata.aspx?id=126
+
+unzip( paste(work.dir, "Ward02Ply.zip", sep=""), exdir=paste(work.dir, "raw/", sep="") )
+
+ward.02.ogr<-readOGR(paste(work.dir, "raw/Ward02Ply.shp", sep=""), layer="Ward02Ply")
+
+ward.02.shps<-importShapefile(paste(work.dir, "raw/Ward02Ply.shp", sep=""))
+coords.to.convert<-as.data.frame(ward.02.shps[, c("X", "Y")])
+coordinates(coords.to.convert)<-~ X + Y # where X and Y stand for the name of your  lat/lon columns
+proj4string(coords.to.convert)<-ward.02.ogr@proj4string
+coords.to.convert<-spTransform(coords.to.convert, CRS("+proj=longlat +datum=WGS84"))
+ward.02.shps[, c("X", "Y")]<-coords.to.convert@coords
+
+contribs.event<-contribs.df[!duplicated(contribs.df$geocode.id) & 
+	!is.na(contribs.df$longitude.consolidated) & (contribs.df$election.cycle!=2012 | is.na(contribs.df$election.cycle)), 
+	c("geocode.id", "longitude.consolidated", "latitude.consolidated")]
+colnames(contribs.event)<-c("EID", "X", "Y")
+contribs.event$X<-as.numeric(contribs.event$X)
+contribs.event$Y<-as.numeric(contribs.event$Y)
+contribs.event<-as.EventData(contribs.event)
+
+contribs.in.wards.2002<-findPolys(contribs.event, ward.shps)
+
+contribs.matched.ward.df<-data.frame(
+	geocode.id=c(contribs.in.wards.2012$EID, contribs.in.wards.2002$EID),
+	contributor.ward=c(
+	  as.character(attr(ward.shps, "PolyData")$NAME[contribs.in.wards.2012$PID]),
+	  as.character(attr(ward.shps, "PolyData")$NAME[contribs.in.wards.2002$PID])),
+	stringsAsFactors=FALSE
+	)
+
+contribs.matched.ward.df$contributor.ward<-
+	gsub("(Ward )|( [(][0-9]*[)])", "", contribs.matched.ward.df$contributor.ward)
+
+contribs.df<-merge(contribs.df, contribs.matched.ward.df, all.x=TRUE)
+
+contribs.df$contributor.ward[is.na(contribs.df$contributor.ward)]<-"Non-DC"
+
+
 
 
 contribs.df$recipient.ward<-NA
@@ -812,57 +911,71 @@ contribs.df<-merge(contribs.df, cama.df, all.x=TRUE)
 			
 rm(cama.df)
 
-contribs.df$multiunit.building<-contribs.df$DC.property.NUM_UNITS>1 &
+contribs.df$DC.property.multiunit.building<-contribs.df$DC.property.NUM_UNITS>1 &
   !is.na(contribs.df$DC.property.NUM_UNITS)
-
-contribs.df$unit.criteria.shell.flag <- !contribs.df$multiunit.building |
-  (!is.na(contribs.df$USA.geocoder.PSuiteNumber.cleaned) | 
-	contribs.df$perl_parsed_sec_unit_num!="" |
-	!is.na(contribs.df$DC.geocoder.UNITNUMBER) )
-
 
 
 
 ### This point is where it is saved
-# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1.Rdata", sep=""))
-# save(committees.df, file=paste(work.dir, "committees finished df may 1.Rdata", sep=""))
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after cama.Rdata", sep=""))
+# save(committees.df, file=paste(work.dir, "committees finished df may 1 after cama.Rdata", sep=""))
+
+shell.id.run<-1
+
+source(paste(code.dir, "shell-corp-identification.r", sep=""))
+
+source(paste(code.dir, "corp-data-gathering.r", sep=""))
 
 
+shell.grouping.df<-contribs.df[contribs.df$contrib.timing.shell.flag, ]
 
-#table(
-# contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL
-)
+shell.grouping.df<-shell.grouping.df[order(
+	shell.grouping.df$address.clean,
+	shell.grouping.df$Committee.Name, 
+	shell.grouping.df$Date.of.Receipt), ]
 
-#contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)][!contribs.df$DC.geocoder.SSL[!is.na(contribs.df$DC.geocoder.SSL)] %in% cama.df$SSL][1:50]
+shell.grouping.df$group.distinguisher<-
+	c(7<shell.grouping.df$Date.of.Receipt[-1]-shell.grouping.df$Date.of.Receipt[-nrow(shell.grouping.df)] |
+	shell.grouping.df$Committee.Name[-1]!=shell.grouping.df$Committee.Name[-nrow(shell.grouping.df)] |
+	shell.grouping.df$address.clean[-1]!=shell.grouping.df$address.clean[-nrow(shell.grouping.df)], FALSE)
 
-#cama.df$SSL[grepl("^3634", cama.df$SSL)]
-#3634
+shell.grouping.df$bundling.instance<-0
+group.num<-1
+
+for ( i in 1:nrow(shell.grouping.df)) {
+	shell.grouping.df$bundling.instance[i]<-group.num
+	if (shell.grouping.df$group.distinguisher[i]) {group.num<-group.num+1}	
+}
+
+contribs.df<-merge(contribs.df, shell.grouping.df[, c("contribution.id", "bundling.instance")], all.x=TRUE)
+
+reg.agent.test.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
+	(contribs.df$DC.property.multiunit.building | contribs.df$address.evidence.multiunit.building) &
+	contribs.df$address.no.unit.clean == contribs.df$address.clean, ]
+
+reg.agent.test.big.df<-contribs.df[!is.na(contribs.df$bundling.instance), ]
+
+contribs.df$reg.agent.shell.flag<-TRUE
+
+for ( i in 1:nrow(reg.agent.test.df)) {
+	
+	contribs.df$reg.agent.shell.flag[
+		which(contribs.df$contribution.id==reg.agent.test.df$contribution.id[i])]<-
+			!is.na(reg.agent.test.df$DCRA.reg.agent.name[i]) & 
+			reg.agent.test.df$DCRA.reg.agent.name[i] %in% 
+			reg.agent.test.big.df$DCRA.reg.agent.name[ 
+			  reg.agent.test.big.df$bundling.instance==reg.agent.test.df$bundling.instance[i] &
+			    reg.agent.test.big.df$contribution.id!=reg.agent.test.df$contribution.id[i]
+				]
+	cat(i, "\n")
+}
 
 
+contribs.df$final.shell.flag <- contribs.df$contrib.timing.shell.flag & contribs.df$reg.agent.shell.flag
 
+shell.id.run<-2
 
+source(paste(code.dir, "shell-corp-identification.r", sep=""))
 
-
-
-
-#########################
-#########################
-#########################
-
-# DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.FULLADDRESS[!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX)]
-
-# DC.contribs.to.geocode.df[1:720, ][!is.na(DC.geocoded.df$returnDataset.diffgram.NewDataSet.Table1.ADDRNUMSUFFIX), ]
-
-gsub("[()]", "", "(67878)")
-                     
-#Think about removing: PNumberFractional
-
-
-library(lattice)
-
-install.packages("rgl")
-library(rgl)
-attach(mtcars)
-plot3d(wt, disp, mpg, col="red", size=3) 
 
 

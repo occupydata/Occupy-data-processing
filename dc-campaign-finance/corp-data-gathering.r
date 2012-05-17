@@ -21,7 +21,7 @@
 # Contact: data at occupydc dot org
 
 
-
+library(stringr)
 
 
 
@@ -206,7 +206,7 @@ suspected.bundled.contrib.ids<-contribs.df$contribution.id[contribs.df$contrib.t
 # suspected.bundled.contrib.ids<-suspected.bundled.contrib.ids[1:10]
 # target.contrib<-suspected.bundled.contrib.ids[3]
 
-dcra.data.to.merge.ls<-list()
+dcra.data.to.merge.ls<-list() 
 
 for (target.contrib in suspected.bundled.contrib.ids) {
 
@@ -289,12 +289,14 @@ scrape.output.df$likely.match[is.na(scrape.output.df$likely.match)]<-TRUE
 # install.packages("RecordLinkage")
 library("RecordLinkage")
 
-scrape.output.df$edit.dist<-levenshteinDist(target.corp.query, scrape.output.df$business.name)
+scrape.output.df$edit.dist<-jarowinkler(target.corp.query, scrape.output.df$business.name)
+
+if (all(scrape.output.df$edit.dist<0.85)) {next}
 
 scrape.output.df$chosen.match<-FALSE
 
 scrape.output.df$chosen.match[
-  which.min(scrape.output.df$edit.dist[scrape.output.df$likely.match])]<-TRUE
+  which.max(scrape.output.df$edit.dist[scrape.output.df$likely.match])]<-TRUE
   
 
 scrape.output.df$contribution.id<-target.contrib
@@ -310,7 +312,7 @@ scrape.output.df$contribution.id<-target.contrib
 #		scrape.output.df[sample(which(scrape.output.df$chosen.match), size=1), ]
 #}
 
-cat(target.corp, "\n")
+cat(which(target.contrib==suspected.bundled.contrib.ids), "of", length(suspected.bundled.contrib.ids), target.corp, "\n")
 
 }
 
@@ -323,15 +325,13 @@ colnames(dcra.data.to.merge.df)<-paste("DCRA.", colnames(dcra.data.to.merge.df),
 colnames(dcra.data.to.merge.df)[
   colnames(dcra.data.to.merge.df)=="DCRA.contribution.id"]<-"contribution.id"
 
-merge.test.df<-merge(contribs.df, dcra.data.to.merge.df)
+contribs.df<-merge(contribs.df, dcra.data.to.merge.df, all.x=TRUE)
 
 
-Date.of.Receipt
-effective.date
-nd.date
-!="Active"
 
-narrow down possible corps by dates
-And narrow by type of corp
-use text matching to get the right one
+
+
+
+#write.csv( merge.test.df[!is.na(merge.test.df$DCRA.corp.name), c("Date.of.Receipt", "Contributor", "contributor.clean", "DCRA.corp.name", "DCRA.reg.agent.name", "address.clean", "DCRA.bus.addr.line.1", "DCRA.reg.agent.addr.line.1")],   file=paste(work.dir, "suspected shell corps with registered agent data.csv", sep=""),  row.names=FALSE)
+
 

@@ -41,7 +41,7 @@ contrib.timing.detect.combined.v<-c()
 contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
 
-
+# map.races<-"All 2010"
 
 map.races<-c(
 	"All All Years",
@@ -132,7 +132,7 @@ for (target.races in map.races) {
 		
 		contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
 		
-		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$Contribution.Type %in% c("Business", "Corporation"), ]
+		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$contributor.type.clean %in% c("Corporation"), ]
 		
 		address.clean.tab<-table(contribs.one.cand.df$address.clean)
 		
@@ -190,9 +190,15 @@ for (target.races in map.races) {
 	
 	# shp2kml 2.1b:
 	
-	shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
-	  contribs.df$Committee.Name %in% comm.temp, ]
-	# perhaps contribs.df$same.address.shell.flag
+	if(shell.id.run==1) {
+    shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
+	    contribs.df$Committee.Name %in% comm.temp, ]
+	}
+	
+	if(shell.id.run==2) {
+		shell.contribs.df<-contribs.df[contribs.df$final.shell.flag &
+			contribs.df$Committee.Name %in% comm.temp, ]
+	}
 	
 	if(nrow(shell.contribs.df)==0) {
 		write.csv(shell.contribs.df, file=paste(work.dir, "NO SHELL CORPS ", target.races, ".csv"), row.names=FALSE)
@@ -200,7 +206,7 @@ for (target.races in map.races) {
 	}
 	
 	shell.contribs.temp.df<-data.frame(address.clean=unique(shell.contribs.df$address.clean),
-																		 shell.address.id=1:length(unique(shell.contribs.df$address.clean)), stringsAsFactors=FALSE)
+	  shell.address.id=1:length(unique(shell.contribs.df$address.clean)), stringsAsFactors=FALSE)
 	
 	shell.contribs.df<-merge(shell.contribs.df, shell.contribs.temp.df)
 	
@@ -219,22 +225,24 @@ for (target.races in map.races) {
 															 stringsAsFactors=FALSE)
 		
 		shell.temp.df<-merge(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
-																					 c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name")], shell.order.df)
+																					 c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name")], shell.order.df)
 		
 		shell.temp.df<-shell.temp.df[order(shell.temp.df$record.order, shell.temp.df$Date.of.Receipt, -shell.temp.df$Amount), ]
 		
 		shell.temp.df$temporal.relation<-
-			c(7<shell.temp.df$Date.of.Receipt[-1]-shell.temp.df$Date.of.Receipt[-nrow(shell.temp.df)], FALSE)
+			c(7<shell.temp.df$Date.of.Receipt[-1]-shell.temp.df$Date.of.Receipt[-nrow(shell.temp.df)] |
+			  shell.temp.df$Committee.Name[-1]!=shell.temp.df$Committee.Name[-nrow(shell.temp.df)], FALSE)
 		
 		shell.temp.df$temporal.relation[!shell.temp.df$temporal.relation]<-""
 		
-		shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "Amount", "Date.of.Receipt", "Committee.Name", "temporal.relation")]), nrow=1)
+		shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "temporal.relation")]), nrow=1)
 		
-		shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/5), sep=""), 
-																bb=paste("amount", 1:(ncol(shell.mat)/5), sep=""), 
-																cc=paste("date", 1:(ncol(shell.mat)/5), sep=""),
-																dd=paste("committee", 1:(ncol(shell.mat)/5), sep=""), 
-																ee=paste("space", 1:(ncol(shell.mat)/5), sep=""),
+		shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/6), sep=""), 
+                                ab=paste("regagent", 1:(ncol(shell.mat)/6), sep=""),
+																bb=paste("amount", 1:(ncol(shell.mat)/6), sep=""), 
+																cc=paste("date", 1:(ncol(shell.mat)/6), sep=""),
+																dd=paste("committee", 1:(ncol(shell.mat)/6), sep=""), 
+																ee=paste("space", 1:(ncol(shell.mat)/6), sep=""),
 																stringsAsFactors=FALSE)
 		
 		shell.mat.df<-as.data.frame(shell.mat, stringsAsFactors=FALSE)
@@ -246,6 +254,8 @@ for (target.races in map.races) {
 								 lat=shell.contribs.df$latitude.consolidated[shell.contribs.df$shell.address.id==i][1],
 								 long=shell.contribs.df$longitude.consolidated[shell.contribs.df$shell.address.id==i][1],
 								 TotalAmount=sum(shell.contribs.df$Amount[shell.contribs.df$shell.address.id==i], na.rm=TRUE),
+								 SSL=shell.contribs.df$DC.geocoder.SSL[shell.contribs.df$shell.address.id==i][1],
+								 MARid=shell.contribs.df$DC.geocoder.ADDRESS_ID[shell.contribs.df$shell.address.id==i][1],
 								 stringsAsFactors=FALSE),
 			shell.mat.df)
 		
@@ -297,17 +307,20 @@ for (target.races in map.races) {
 	
 }
 
+
+# View(shell.grouping.df[, c("address.clean", "Committee.Name","bundling.instance")])
+
+
 ### This point is where it is saved
 # save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after shell ID.Rdata", sep=""))
+# save(committees.df, file=paste(work.dir, "committees finished df may 1 after shell ID.Rdata", sep=""))
+# save.image(file=paste(work.dir, "full workspace image after shell ID.Rdata", sep=""))
 
-
-write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )
+# write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )
 
 
 
 # sudo port install php5-curl
-
-
 
 
 # http://ocf.dc.gov/intop/opinions/op_96_12.shtm
