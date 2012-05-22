@@ -31,23 +31,44 @@ goog.barchart<-function(x) {
 
 
 
-test.df<-aggregate(contribs.df$Amount[contribs.df$Contribution.Type %in% c("Corporation", "Business")],
-  by=list(same.geo=contribs.df$contributor.recipient.same.geo[contribs.df$Contribution.Type %in% c("Corporation", "Business")],
-  ward=contribs.df$recipient.ward[contribs.df$Contribution.Type %in% c("Corporation", "Business")]),
+corp.geog.df<-aggregate(contribs.df$Amount[contribs.df$contribution.type.clean=="Corporation"], by=list(same.geo=contribs.df$contributor.recipient.same.geo[contribs.df$contribution.type.clean=="Corporation"],
+  ward=contribs.df$recipient.ward[contribs.df$contribution.type.clean=="Corporation"]),
   FUN=sum)
 
+corp.geog.df<-melt(corp.geog.df,  measure.vars="x")
+corp.geog.df<-as.data.frame(cast(corp.geog.df, formula= ward ~ same.geo ))
+cat(goog.barchart(corp.geog.df), sep="\n")
 
 
-test.df<-melt(test.df,  measure.vars="x")
+corp.years.df<-aggregate(contribs.df$Amount, by=list(year=contribs.df$election.cycle,
+contribution.type=contribs.df$contribution.type.clean), FUN=sum, na.rm=TRUE)
 
-test.df<-as.data.frame(cast(test.df, formula= ward ~ same.geo ))
+corp.years.df<-melt(corp.years.df,  measure.vars="x")
+corp.years.df<-as.data.frame(cast(corp.years.df, formula= year ~ contribution.type ))
+for ( i in 1:ncol(corp.years.df)) {
+	corp.years.df[is.na(corp.years.df[, i]), i]<-0
+}
+corp.years.df<-corp.years.df[, c(
+	"year", "Individual", "Corporation", "Political Action Committee", "Candidate", "Other", "Business Partnership", "Labor Union")]
+cat(goog.barchart(corp.years.df), sep="\n")
 
-cat(goog.barchart(test.df), sep="\n")
+
+
+
+corp.puppet.df<-aggregate(contribs.df$Amount[contribs.df$contribution.type.clean=="Corporation"], by=list(puppet=contribs.df$final.puppet.flag[contribs.df$contribution.type.clean=="Corporation"], year=contribs.df$election.cycle[contribs.df$contribution.type.clean=="Corporation"]), FUN=sum)
+
+corp.puppet.df<-melt(corp.puppet.df,  measure.vars="x")
+corp.puppet.df<-as.data.frame(cast(corp.puppet.df, formula= year ~ puppet ))
+
+corp.puppet.df$puppet.proportion<-
+	corp.puppet.df[, "TRUE"]/(corp.puppet.df[, "TRUE"]+corp.puppet.df[, "FALSE"])
 
 
 
 
 
 
-
-
+                   
+         
+table(contribs.df$contribution.type.clean=="Democratic PPC")
+contribs.df[contribs.df$contribution.type.clean=="Statehood Green Party PPC", c("contributor.clean", "Amount")]

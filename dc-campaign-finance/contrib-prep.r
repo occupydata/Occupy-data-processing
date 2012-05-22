@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Data Committee of Occupy DC
-# 	
+# 
+# Licensed under the MIT License:
 # Permission is hereby granted, free of charge, to any person obtaining a copy of 
 # this software and associated documentation files (the "Software"), to deal in 
 # the Software without restriction, including without limitation the rights to 
@@ -20,15 +21,56 @@
 #
 # Contact: data at occupydc dot org
 
-
-
-# TO DO: Could use "DC.geocoder.details"  for standaized non-geocoded addresses
-
 work.dir<-""
 # Put your working directory here
 
 code.dir<-""
-# Put your code directory here. (i.e. where is this file?)
+# Put your code directory here. (i.e. where is this R script file?)
+
+usc.api.key<-""
+# Put your USC WebGIS API key here
+
+email.addr<-""
+# Your email address for the USC WebGIS low-credit alert
+
+
+
+install.packages("sendmailR")
+install.packages("stringr")
+install.packages("XML")
+install.packages("reshape")
+install.packages("foreign")
+install.packages("RecordLinkage")
+install.packages("network")
+install.packages("igraph")
+install.packages("maptools")
+install.packages("splancs")
+install.packages("PBSmapping")
+install.packages("sp")
+install.packages("geosphere")
+install.packages("shapefiles")
+setRepositories(ind=1:2)
+install.packages("rgdal")
+
+library(sendmailR)
+library(stringr)
+library(XML)
+library(reshape)
+library(foreign)
+library(RecordLinkage)
+library(network)
+library(igraph)
+library(maptools)
+library(splancs)
+library(PBSmapping)
+library(sp)
+library(geosphere)
+library(shapefiles)
+library(rgdal)
+
+
+
+
 
 download.file(
   "http://commondatastorage.googleapis.com/ckannet-storage/2012-05-01T132354/DC_campaign_contribs_99_part12.zip",
@@ -118,16 +160,6 @@ DC.contribs.to.geocode.df$DC.api.url<-paste(
 # TO DO: Deal with this warning message: 1: In strsplit(URL, "") : input string 1 is invalid in this locale
 
 
-
-install.packages("sendmailR")
-install.packages("stringr")
-install.packages("XML")
-install.packages("reshape")
-
-library(sendmailR)
-library(stringr)
-library(XML)
-library(reshape)
 
 check.integer <- function(N){
   !length(grep("[^[:digit:]]", format(N, scientific = FALSE)))
@@ -252,16 +284,12 @@ USA.contribs.to.geocode.df$api.url<-paste(
   URLencode.vec(USA.contribs.to.geocode.df$state, reserved = TRUE),
   "&zip=",
   URLencode.vec(USA.contribs.to.geocode.df$Zip, reserved = TRUE),
-  "&apikey=YOUR_API_KEY_HERE&format=tsv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
+  "&apikey=", 
+  usc.api.key, "&format=tsv&census=true&censusYear=2010&notStore=false&verbose=true&h=u&geom=false&version=2.96",
   sep=""
   )
 
 
-# observs<-sample(1:nrow(contribs.to.geocode.df), 2000)
-# observs[i]
-
-library(sendmailR)
-library(stringr)
 
 credits<-2000
 
@@ -281,7 +309,7 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
   if (check.integer(i/50)) {
     
     credits<- tryCatch(
-      read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
+      read.table(paste("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=", usc.api.key, "&format=csv", sep=""), stringsAsFactors=FALSE, sep=",")[, 2],
       error = function(e) { credits })
     
     junk.v<-tryCatch(save(geocode.output.ls, file=paste(work.dir, "Geocode output list.Rdata")),
@@ -292,7 +320,7 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
   if (credits<=10) {
     
     from <- sprintf("<sendmailR@%s>", Sys.info()[4])
-    to <- ""
+    to <- email.addr
     # email address above
     subject <- "ADD MORE WEBGIS CREDITS"
     
@@ -304,7 +332,7 @@ for ( i in 1:nrow(USA.contribs.to.geocode.df)) {
       Sys.sleep(10)
       
       credits<- tryCatch(
-        read.table("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=YOUR_API_KEY_HERE&format=csv", stringsAsFactors=FALSE, sep=",")[, 2],
+        read.table(paste("http://webgis.usc.edu/UserServices/Payments/AccountBalanceWebServiceHttp.aspx?version=1.0&apikey=", usc.api.key, "&format=csv" sep=""), stringsAsFactors=FALSE, sep=",")[, 2],
         error = function(e) { credits })
       
     }
@@ -454,7 +482,6 @@ rm(contribs.geocoded.df)
 
 contribs.df$address.is.unclean<-!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder
 
-# TO DO: indicator for "unclean" data in "clean" address columns
 
 contribs.df$address.clean[!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder]<-
 	contribs.df$perl_parsed_combined_no_city[!contribs.df$USA.geocoder.street.precise & contribs.df$USA.geocoder]
@@ -467,6 +494,7 @@ contribs.df$city.clean[is.na(contribs.df$city.clean)]<-contribs.df$city[is.na(co
 contribs.df$state.clean[is.na(contribs.df$state.clean)]<-contribs.df$perl_parsed_state[is.na(contribs.df$state.clean)]
 contribs.df$zip.clean[is.na(contribs.df$zip.clean)]<-contribs.df$Zip[is.na(contribs.df$zip.clean)]
 
+contribs.df$address.clean<-gsub("(^ +)|( +$)", "", contribs.df$address.clean)
 
 unit.nums.to.fix.v<-str_extract(contribs.df$address.clean, " [^ ]+ [0-9]+-?[A-Za-z]?$")
 no.units.index<-is.na(unit.nums.to.fix.v)
@@ -474,12 +502,30 @@ unit.nums.to.fix.v<-unit.nums.to.fix.v[!no.units.index]
 
 unit.nums.to.fix.v<-gsub("( # )|( APARTMENT )|( APT )|( DEPT )|( FL )|( FLOOR )|( NO )|( STE )|( SUITE )|( UNIT )", " No. ", unit.nums.to.fix.v)
 
+
 contribs.df$address.clean<-gsub(" [^ ]+ [0-9]+-?[A-Za-z]?$", "", contribs.df$address.clean)
 
 contribs.df$address.clean[!no.units.index]<-paste(contribs.df$address.clean[!no.units.index],
   unit.nums.to.fix.v, sep="")
 
+simple.cap <- function(x) {
+	s <- strsplit(x, " ")[[1]]
+	paste(toupper(substring(s, 1,1)), substring(s, 2),
+				sep="", collapse=" ")
+}
+
+simple.cap<-Vectorize(simple.cap, USE.NAMES=FALSE)
+contribs.df$address.clean<-simple.cap(tolower(contribs.df$address.clean))
+contribs.df$city.clean<-simple.cap(tolower(contribs.df$city.clean))
+
+contribs.df$address.clean<-gsub("( Nw )|( Nw$)", "NW", contribs.df$address.clean)
+contribs.df$address.clean<-gsub("( Ne )|( Ne$)", "NE", contribs.df$address.clean)
+contribs.df$address.clean<-gsub("( Sw )|( Sw$)", "SW", contribs.df$address.clean)
+contribs.df$address.clean<-gsub("( Se )|( Se$)", "SE", contribs.df$address.clean)
+
 contribs.df$address.no.unit.clean<-gsub(" No[.] [0-9]+[A-Za-z]?$", "", contribs.df$address.clean)
+
+
 
 contribs.df$address.evidence.multiunit.building<-FALSE
 
@@ -523,7 +569,12 @@ contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Busine
 contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Individual "]<-"Individual"
 contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="individual"]<-"Individual"
 contribs.df$contribution.type.clean[contribs.df$contribution.type.clean=="Labor Org"]<-"Labor"
-
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean %in% 
+	c("", "Organization", "PCC", "Republican PPC", "Democratic PPC", "Statehood Green Party PPC")]<-"Other"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean %in% 
+	c("Labor Sponsored PAC", "PAC", "Corporate Sponsored PAC")]<-"Political Action Committee"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean =="Partnership"]<-"Business Partnership"
+contribs.df$contribution.type.clean[contribs.df$contribution.type.clean =="Labor"]<-"Labor Union"
 
 contribs.df$contributor.clean<-contribs.df$Contributor
 
@@ -545,15 +596,7 @@ contribs.df$contributor.clean<-gsub(" [Ii][Nn][Cc]$", " Inc.", contribs.df$contr
 
 # input should be: contribs.df[, c("address.clean", "contributor.clean", "contribution.id")]
 
-# Dependencies: RecordLinkage, network, igraph
 
-install.packages("RecordLinkage")
-install.packages("network")
-install.packages("igraph")
-
-library(RecordLinkage)
-library(network)
-library(igraph)
 
 #test.df<-data.frame(incorrect=c("az", "aa", "bz", "bb"), correct=c("aa", "aa", "bb", "bb"), stringsAsFactors=FALSE)
 
@@ -696,25 +739,19 @@ colnames(contribs.df)[colnames(contribs.df)=="year"]<-"election.cycle"
 colnames(contribs.df)[colnames(contribs.df)=="party"]<-"candidate.party"
 colnames(contribs.df)[colnames(contribs.df)=="organization_date"]<-"candidate.committee.organization.date"
 
+contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"DATA UNAVAILABLE"
+contribs.df$max.legal.contrib<-NA
+
+
+contribs.df$max.legal.contrib[grepl("(Council Ward)|(School Board President)|(School Board At-Large)", contribs.df$electoral.office)]<-500
+contribs.df$max.legal.contrib[grepl("Council At-Large", contribs.df$electoral.office)]<-1000
+contribs.df$max.legal.contrib[grepl("Council Chairman", contribs.df$electoral.office)]<-1500
+contribs.df$max.legal.contrib[grepl("(Mayor)|(US Senator)|(US Representative)|(DATA UNAVAILABLE)", contribs.df$electoral.office)]<-2000
+contribs.df$max.legal.contrib[grepl("(DC Democratic State Committee)|(School Board Ward)|(School Board District)|(National Committee)|(Delegates)", contribs.df$electoral.office)]<-300
 
 
 
-
-
-install.packages("maptools")
-install.packages("splancs")
-install.packages("PBSmapping")
-install.packages("sp")
-setRepositories(ind=1:2)
-install.packages("rgdal")
-
-
-library("maptools")
-library("splancs")
-library("PBSmapping")
-library("rgdal")
-library("sp")
-
+read.dbf <-  foreign::read.dbf
 
 
 download.file(
@@ -725,11 +762,13 @@ download.file(
 
 unzip( paste(work.dir, "WardPly.zip", sep=""), exdir=paste(work.dir, "raw/", sep="") )
 
+
 ward.12.ogr<-readOGR(paste(work.dir, "raw/WardPly.shp", sep=""), layer="WardPly")
+
 
 ward.12.shps<-importShapefile(paste(work.dir, "raw/WardPly.shp", sep=""))
 coords.to.convert<-as.data.frame(ward.12.shps[, c("X", "Y")])
-coordinates(coords.to.convert)<-~ X + Y # where X and Y stand for the name of your  lat/lon columns
+coordinates(coords.to.convert)<-~ X + Y 
 proj4string(coords.to.convert)<-ward.12.ogr@proj4string
 coords.to.convert<-spTransform(coords.to.convert, CRS("+proj=longlat +datum=WGS84"))
 ward.12.shps[, c("X", "Y")]<-coords.to.convert@coords
@@ -741,7 +780,7 @@ contribs.event$X<-as.numeric(contribs.event$X)
 contribs.event$Y<-as.numeric(contribs.event$Y)
 contribs.event<-as.EventData(contribs.event)
 
-contribs.in.wards.2012<-findPolys(contribs.event, ward.shps)
+contribs.in.wards.2012<-findPolys(contribs.event, ward.12.shps)
 
 
 
@@ -757,7 +796,7 @@ ward.02.ogr<-readOGR(paste(work.dir, "raw/Ward02Ply.shp", sep=""), layer="Ward02
 
 ward.02.shps<-importShapefile(paste(work.dir, "raw/Ward02Ply.shp", sep=""))
 coords.to.convert<-as.data.frame(ward.02.shps[, c("X", "Y")])
-coordinates(coords.to.convert)<-~ X + Y # where X and Y stand for the name of your  lat/lon columns
+coordinates(coords.to.convert)<-~ X + Y 
 proj4string(coords.to.convert)<-ward.02.ogr@proj4string
 coords.to.convert<-spTransform(coords.to.convert, CRS("+proj=longlat +datum=WGS84"))
 ward.02.shps[, c("X", "Y")]<-coords.to.convert@coords
@@ -770,13 +809,13 @@ contribs.event$X<-as.numeric(contribs.event$X)
 contribs.event$Y<-as.numeric(contribs.event$Y)
 contribs.event<-as.EventData(contribs.event)
 
-contribs.in.wards.2002<-findPolys(contribs.event, ward.shps)
+contribs.in.wards.2002<-findPolys(contribs.event, ward.02.shps)
 
 contribs.matched.ward.df<-data.frame(
 	geocode.id=c(contribs.in.wards.2012$EID, contribs.in.wards.2002$EID),
 	contributor.ward=c(
-	  as.character(attr(ward.shps, "PolyData")$NAME[contribs.in.wards.2012$PID]),
-	  as.character(attr(ward.shps, "PolyData")$NAME[contribs.in.wards.2002$PID])),
+	  as.character(attr(ward.12.shps, "PolyData")$NAME[contribs.in.wards.2012$PID]),
+	  as.character(attr(ward.02.shps, "PolyData")$NAME[contribs.in.wards.2002$PID])),
 	stringsAsFactors=FALSE
 	)
 
@@ -812,11 +851,7 @@ contribs.df$contributor.recipient.same.geo[contribs.df$contributor.ward!="Non-DC
 
 
 
-install.packages("reshape")
-install.packages("foreign")
 
-library(foreign)
-library(reshape)
 
 download.file("http://dcatlas.dcgis.dc.gov/download/CamaCommPt.ZIP", 
 							paste(work.dir, "raw/CamaCommPt.ZIP", sep="") )
@@ -920,46 +955,46 @@ contribs.df$DC.property.multiunit.building<-contribs.df$DC.property.NUM_UNITS>1 
 # save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after cama.Rdata", sep=""))
 # save(committees.df, file=paste(work.dir, "committees finished df may 1 after cama.Rdata", sep=""))
 
-shell.id.run<-1
+puppet.id.run<-1
 
 source(paste(code.dir, "shell-corp-identification.r", sep=""))
 
 source(paste(code.dir, "corp-data-gathering.r", sep=""))
 
 
-shell.grouping.df<-contribs.df[contribs.df$contrib.timing.shell.flag, ]
+puppet.grouping.df<-contribs.df[contribs.df$contrib.timing.puppet.flag, ]
 
-shell.grouping.df<-shell.grouping.df[order(
-	shell.grouping.df$address.clean,
-	shell.grouping.df$Committee.Name, 
-	shell.grouping.df$Date.of.Receipt), ]
+puppet.grouping.df<-puppet.grouping.df[order(
+	puppet.grouping.df$address.clean,
+	puppet.grouping.df$Committee.Name, 
+	puppet.grouping.df$Date.of.Receipt), ]
 
-shell.grouping.df$group.distinguisher<-
-	c(7<shell.grouping.df$Date.of.Receipt[-1]-shell.grouping.df$Date.of.Receipt[-nrow(shell.grouping.df)] |
-	shell.grouping.df$Committee.Name[-1]!=shell.grouping.df$Committee.Name[-nrow(shell.grouping.df)] |
-	shell.grouping.df$address.clean[-1]!=shell.grouping.df$address.clean[-nrow(shell.grouping.df)], FALSE)
+puppet.grouping.df$group.distinguisher<-
+	c(7<puppet.grouping.df$Date.of.Receipt[-1]-puppet.grouping.df$Date.of.Receipt[-nrow(puppet.grouping.df)] |
+	puppet.grouping.df$Committee.Name[-1]!=puppet.grouping.df$Committee.Name[-nrow(puppet.grouping.df)] |
+	puppet.grouping.df$address.clean[-1]!=puppet.grouping.df$address.clean[-nrow(puppet.grouping.df)], FALSE)
 
-shell.grouping.df$bundling.instance<-0
+puppet.grouping.df$bundling.instance<-0
 group.num<-1
 
-for ( i in 1:nrow(shell.grouping.df)) {
-	shell.grouping.df$bundling.instance[i]<-group.num
-	if (shell.grouping.df$group.distinguisher[i]) {group.num<-group.num+1}	
+for ( i in 1:nrow(puppet.grouping.df)) {
+	puppet.grouping.df$bundling.instance[i]<-group.num
+	if (puppet.grouping.df$group.distinguisher[i]) {group.num<-group.num+1}	
 }
 
-contribs.df<-merge(contribs.df, shell.grouping.df[, c("contribution.id", "bundling.instance")], all.x=TRUE)
+contribs.df<-merge(contribs.df, puppet.grouping.df[, c("contribution.id", "bundling.instance")], all.x=TRUE)
 
-reg.agent.test.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
+reg.agent.test.df<-contribs.df[contribs.df$contrib.timing.puppet.flag & 
 	(contribs.df$DC.property.multiunit.building | contribs.df$address.evidence.multiunit.building) &
 	contribs.df$address.no.unit.clean == contribs.df$address.clean, ]
 
 reg.agent.test.big.df<-contribs.df[!is.na(contribs.df$bundling.instance), ]
 
-contribs.df$reg.agent.shell.flag<-TRUE
+contribs.df$reg.agent.puppet.flag<-TRUE
 
 for ( i in 1:nrow(reg.agent.test.df)) {
 	
-	contribs.df$reg.agent.shell.flag[
+	contribs.df$reg.agent.puppet.flag[
 		which(contribs.df$contribution.id==reg.agent.test.df$contribution.id[i])]<-
 			!is.na(reg.agent.test.df$DCRA.reg.agent.name[i]) & 
 			reg.agent.test.df$DCRA.reg.agent.name[i] %in% 
@@ -970,10 +1005,17 @@ for ( i in 1:nrow(reg.agent.test.df)) {
 	cat(i, "\n")
 }
 
+more.than.one.shell.corp<-unique(contribs.df$bundling.instance[
+  duplicated(contribs.df$bundling.instance) & contribs.df$reg.agent.puppet.flag])
 
-contribs.df$final.shell.flag <- contribs.df$contrib.timing.shell.flag & contribs.df$reg.agent.shell.flag
+contribs.df$reg.agent.puppet.flag[!(contribs.df$bundling.instance %in% more.than.one.shell.corp) &
+	contribs.df$reg.agent.puppet.flag]<-FALSE
 
-shell.id.run<-2
+
+contribs.df$final.puppet.flag <- contribs.df$contrib.timing.puppet.flag &
+  contribs.df$reg.agent.puppet.flag
+
+puppet.id.run<-2
 
 source(paste(code.dir, "shell-corp-identification.r", sep=""))
 

@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Data Committee of Occupy DC
-# 	
+# 
+# Licensed under the MIT License:
 # Permission is hereby granted, free of charge, to any person obtaining a copy of 
 # this software and associated documentation files (the "Software"), to deal in 
 # the Software without restriction, including without limitation the rights to 
@@ -21,9 +22,6 @@
 # Contact: data at occupydc dot org
 
 
-library(stringr)
-
-
 
 parse.dcra<-function(x) {
 	
@@ -31,7 +29,7 @@ parse.dcra<-function(x) {
 	
 	ret.df<-vector(mode="list", length=34)
 	
-	names(ret.df)<-c("corp.name",
+	names(ret.df)<-c("business.full.name",
 									 "file.num",
 									 "entity.id",
 									 "model.type",
@@ -67,7 +65,7 @@ parse.dcra<-function(x) {
 									 "reg.agent.email")
 	
 	temp.v<-x[grepl("Initial File Number:", x)]
-	ret.df$corp.name<-gsub("&nbsp- Initial File Number:.+", "", temp.v)
+	ret.df$business.full.name<-gsub("&nbsp- Initial File Number:.+", "", temp.v)
 	ret.df$file.num<-gsub(".+&nbsp- Initial File Number: ", "", temp.v)
 	
 	ret.df$entity.id<-x[which(x=="Entity Id")+1]
@@ -201,7 +199,7 @@ parse.dcra<-function(x) {
 }
 
 
-suspected.bundled.contrib.ids<-contribs.df$contribution.id[contribs.df$contrib.timing.shell.flag]
+suspected.bundled.contrib.ids<-contribs.df$contribution.id[contribs.df$contrib.timing.puppet.flag]
 
 # suspected.bundled.contrib.ids<-suspected.bundled.contrib.ids[1:10]
 # target.contrib<-suspected.bundled.contrib.ids[3]
@@ -210,7 +208,7 @@ dcra.data.to.merge.ls<-list()
 
 for (target.contrib in suspected.bundled.contrib.ids) {
 
-target.corp<-contribs.df$Contributor[contribs.df$contribution.id==target.contrib]
+target.corp<-contribs.df$contributor.clean[contribs.df$contribution.id==target.contrib]
 
 #target.contrib<-100
 
@@ -267,15 +265,15 @@ scrape.output.df$date.of.organization<-as.Date(scrape.output.df$date.of.organiza
 
 
 scrape.output.df$likely.match<-FALSE
-scrape.output.df$birth.date<-scrape.output.df$effective.date
+scrape.output.df$birth.date<-scrape.output.df$date.of.organization
 scrape.output.df$death.date<-NA
 
 for ( i in 1:nrow(scrape.output.df)) {
 	
   if (scrape.output.df$entity.status[i]=="Active") {
-    death.date<-as.Date("12/31/2012", "%m/%d/%Y")
+  	scrape.output.df$death.date<-as.Date("12/31/2012", "%m/%d/%Y")
   } else {
-  	death.date<-scrape.output.df$entity.status.date[i]
+  	scrape.output.df$death.date<-scrape.output.df$entity.status.date[i]
   }
   
 }
@@ -286,17 +284,17 @@ scrape.output.df$likely.match<-
 
 scrape.output.df$likely.match[is.na(scrape.output.df$likely.match)]<-TRUE
 
-# install.packages("RecordLinkage")
-library("RecordLinkage")
 
-scrape.output.df$edit.dist<-jarowinkler(target.corp.query, scrape.output.df$business.name)
 
-if (all(scrape.output.df$edit.dist<0.85)) {next}
+scrape.output.df$match.score<-jarowinkler(target.corp.query, scrape.output.df$business.name)
+
+if (all(scrape.output.df$match.score[scrape.output.df$likely.match]<0.85) |
+  all(!scrape.output.df$likely.match)) {next}
 
 scrape.output.df$chosen.match<-FALSE
 
 scrape.output.df$chosen.match[
-  which.max(scrape.output.df$edit.dist[scrape.output.df$likely.match])]<-TRUE
+  which.max(scrape.output.df$match.score[scrape.output.df$likely.match])]<-TRUE
   
 
 scrape.output.df$contribution.id<-target.contrib
@@ -325,6 +323,9 @@ colnames(dcra.data.to.merge.df)<-paste("DCRA.", colnames(dcra.data.to.merge.df),
 colnames(dcra.data.to.merge.df)[
   colnames(dcra.data.to.merge.df)=="DCRA.contribution.id"]<-"contribution.id"
 
+dcra.data.to.merge.df$DCRA.likely.match<-NULL
+dcra.data.to.merge.df$DCRA.chosen.match<-NULL
+
 contribs.df<-merge(contribs.df, dcra.data.to.merge.df, all.x=TRUE)
 
 
@@ -332,6 +333,6 @@ contribs.df<-merge(contribs.df, dcra.data.to.merge.df, all.x=TRUE)
 
 
 
-#write.csv( merge.test.df[!is.na(merge.test.df$DCRA.corp.name), c("Date.of.Receipt", "Contributor", "contributor.clean", "DCRA.corp.name", "DCRA.reg.agent.name", "address.clean", "DCRA.bus.addr.line.1", "DCRA.reg.agent.addr.line.1")],   file=paste(work.dir, "suspected shell corps with registered agent data.csv", sep=""),  row.names=FALSE)
+#write.csv( merge.test.df[!is.na(merge.test.df$DCRA.corp.name), c("Date.of.Receipt", "Contributor", "contributor.clean", "DCRA.corp.name", "DCRA.reg.agent.name", "address.clean", "DCRA.bus.addr.line.1", "DCRA.reg.agent.addr.line.1")],   file=paste(work.dir, "suspected puppet corps with registered agent data.csv", sep=""),  row.names=FALSE)
 
 

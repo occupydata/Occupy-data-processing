@@ -1,5 +1,6 @@
 # Copyright (c) 2012 Data Committee of Occupy DC
-# 	
+# 
+# Licensed under the MIT License:
 # Permission is hereby granted, free of charge, to any person obtaining a copy of 
 # this software and associated documentation files (the "Software"), to deal in 
 # the Software without restriction, including without limitation the rights to 
@@ -28,17 +29,14 @@
 
 #% of corp contribs that are suspected bundling
 
-library("stringr")
 
-contribs.df$same.address.shell.flag<-FALSE
-contribs.df$max.contrib.shell.flag<-FALSE
-contribs.df$contrib.timing.shell.flag<-FALSE
+contribs.df$same.address.puppet.flag<-FALSE
+contribs.df$max.contrib.puppet.flag<-FALSE
+contribs.df$contrib.timing.puppet.flag<-FALSE
 
 same.address.combined.v<-c()
 max.contrib.detect.combined.v<-c()
 contrib.timing.detect.combined.v<-c()
-
-contribs.df$electoral.office[is.na(contribs.df$electoral.office)]<-"placeholder"
 
 
 # map.races<-"All 2010"
@@ -82,6 +80,8 @@ map.races<-c(
 	"Ward 8 2008",
 	"Ward 8 2004")
 
+
+if(puppet.id.run==1) {map.races<-"All All Years"}
 
 
 all.committees<-unique(contribs.df$Committee.Name)
@@ -132,7 +132,7 @@ for (target.races in map.races) {
 		
 		contribs.one.cand.df<-contribs.df[contribs.df$Committee.Name==target.committee, ]
 		
-		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$contributor.type.clean %in% c("Corporation"), ]
+		contribs.one.cand.df<-contribs.one.cand.df[contribs.one.cand.df$contribution.type.clean %in% c("Corporation"), ]
 		
 		address.clean.tab<-table(contribs.one.cand.df$address.clean)
 		
@@ -145,11 +145,11 @@ for (target.races in map.races) {
 			
 			contrib.office<-contribs.one.cand.df$electoral.office[1]
 			
-			if (grepl("(Council Ward)|(School Board President)|(School Board At-Large)|(placeholder)", contrib.office)) {max.legal.contrib<-500}
+			if (grepl("(Council Ward)|(School Board President)|(School Board At-Large)", contrib.office)) {max.legal.contrib<-500}
 			if (grepl("Council At-Large", contrib.office)) {max.legal.contrib<-1000}
 			if (grepl("Council Chairman", contrib.office)) {max.legal.contrib<-1500}
-			if (grepl("(Mayor)|(US Senator)|(US Representative)", contrib.office)) {max.legal.contrib<-2000}
-			if (grepl("(DC Democratic State Committee)|(School Board Ward)|(School Board District)|(National Committee)", contrib.office)) {max.legal.contrib<-300}
+			if (grepl("(Mayor)|(US Senator)|(US Representative)|(DATA UNAVAILABLE)", contrib.office)) {max.legal.contrib<-2000}
+			if (grepl("(DC Democratic State Committee)|(School Board Ward)|(School Board District)|(National Committee)|(Delegates)", contrib.office)) {max.legal.contrib<-300}
 			
 			max.contrib.detect.v<-bundlers.temp.df$contribution.id[bundlers.temp.df$Amount==max.legal.contrib]
 			
@@ -179,148 +179,150 @@ for (target.races in map.races) {
 	max.contrib.detect.combined.v<-unique(max.contrib.detect.combined.v)
 	contrib.timing.detect.combined.v<-unique(contrib.timing.detect.combined.v)
 	
-	contribs.df$same.address.shell.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
-	contribs.df$max.contrib.shell.flag[
-		contribs.df$contribution.id %in% max.contrib.detect.combined.v & contribs.df$same.address.shell.flag]<-TRUE
+	contribs.df$same.address.puppet.flag[contribs.df$address.clean %in% same.address.combined.v]<-TRUE
+	contribs.df$max.contrib.puppet.flag[
+		contribs.df$contribution.id %in% max.contrib.detect.combined.v & contribs.df$same.address.puppet.flag]<-TRUE
 	
-	contribs.df$contrib.timing.shell.flag[
+	contribs.df$contrib.timing.puppet.flag[
 		contribs.df$contribution.id %in% contrib.timing.detect.combined.v &
-			contribs.df$same.address.shell.flag &
-			contribs.df$max.contrib.shell.flag]<-TRUE
+			contribs.df$same.address.puppet.flag &
+			contribs.df$max.contrib.puppet.flag]<-TRUE
 	
 	# shp2kml 2.1b:
 	
-	if(shell.id.run==1) {
-    shell.contribs.df<-contribs.df[contribs.df$contrib.timing.shell.flag & 
-	    contribs.df$Committee.Name %in% comm.temp, ]
+	if(puppet.id.run==1) {
+	  next
+#    puppet.contribs.df<-contribs.df[contribs.df$contrib.timing.puppet.flag & 
+#	    contribs.df$Committee.Name %in% comm.temp, ]
 	}
 	
-	if(shell.id.run==2) {
-		shell.contribs.df<-contribs.df[contribs.df$final.shell.flag &
+	if(puppet.id.run==2) {
+		puppet.contribs.df<-contribs.df[contribs.df$final.puppet.flag &
 			contribs.df$Committee.Name %in% comm.temp, ]
 	}
 	
-	if(nrow(shell.contribs.df)==0) {
-		write.csv(shell.contribs.df, file=paste(work.dir, "NO SHELL CORPS ", target.races, ".csv"), row.names=FALSE)
+	if(nrow(puppet.contribs.df)==0) {
+		write.csv(puppet.contribs.df, file=paste(work.dir, "NO puppet CORPS ", target.races, ".csv"), row.names=FALSE)
 		next
 	}
 	
-	shell.contribs.temp.df<-data.frame(address.clean=unique(shell.contribs.df$address.clean),
-	  shell.address.id=1:length(unique(shell.contribs.df$address.clean)), stringsAsFactors=FALSE)
+	puppet.contribs.temp.df<-data.frame(address.clean=unique(puppet.contribs.df$address.clean),
+	  puppet.address.id=1:length(unique(puppet.contribs.df$address.clean)), stringsAsFactors=FALSE)
 	
-	shell.contribs.df<-merge(shell.contribs.df, shell.contribs.temp.df)
+	puppet.contribs.df<-merge(puppet.contribs.df, puppet.contribs.temp.df)
 	
-	shell.ls<-vector(mode="list", length=length(unique(shell.contribs.df$shell.address.id)))
+	puppet.ls<-vector(mode="list", length=length(unique(puppet.contribs.df$puppet.address.id)))
 	
-	names(shell.ls)<-unique(shell.contribs.df$shell.address.id)
+	names(puppet.ls)<-unique(puppet.contribs.df$puppet.address.id)
 	
-	i<-unique(shell.contribs.df$shell.address.id)[1]
+	i<-unique(puppet.contribs.df$puppet.address.id)[1]
 	i<-1
 	
-	for ( i in unique(shell.contribs.df$shell.address.id)) {
+	for ( i in unique(puppet.contribs.df$puppet.address.id)) {
 		
-		shell.order.tab<-sort(table(shell.contribs.df[shell.contribs.df$shell.address.id==i, "Committee.Name"]), decreasing = TRUE)
+		puppet.order.tab<-sort(table(puppet.contribs.df[puppet.contribs.df$puppet.address.id==i, "Committee.Name"]), decreasing = TRUE)
 		
-		shell.order.df<-data.frame(Committee.Name=names(shell.order.tab), record.order=1:length(shell.order.tab),
+		puppet.order.df<-data.frame(Committee.Name=names(puppet.order.tab), record.order=1:length(puppet.order.tab),
 															 stringsAsFactors=FALSE)
 		
-		shell.temp.df<-merge(shell.contribs.df[shell.contribs.df$shell.address.id==i, 
-																					 c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name")], shell.order.df)
+		puppet.temp.df<-merge(puppet.contribs.df[puppet.contribs.df$puppet.address.id==i, 
+																					 c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name")], puppet.order.df)
 		
-		shell.temp.df<-shell.temp.df[order(shell.temp.df$record.order, shell.temp.df$Date.of.Receipt, -shell.temp.df$Amount), ]
+		puppet.temp.df<-puppet.temp.df[order(puppet.temp.df$record.order, puppet.temp.df$Date.of.Receipt, -puppet.temp.df$Amount), ]
 		
-		shell.temp.df$temporal.relation<-
-			c(7<shell.temp.df$Date.of.Receipt[-1]-shell.temp.df$Date.of.Receipt[-nrow(shell.temp.df)] |
-			  shell.temp.df$Committee.Name[-1]!=shell.temp.df$Committee.Name[-nrow(shell.temp.df)], FALSE)
+		puppet.temp.df$temporal.relation<-
+			c(7<puppet.temp.df$Date.of.Receipt[-1]-puppet.temp.df$Date.of.Receipt[-nrow(puppet.temp.df)] |
+			  puppet.temp.df$Committee.Name[-1]!=puppet.temp.df$Committee.Name[-nrow(puppet.temp.df)], FALSE)
 		
-		shell.temp.df$temporal.relation[!shell.temp.df$temporal.relation]<-""
+		puppet.temp.df$temporal.relation[!puppet.temp.df$temporal.relation]<-""
 		
-		shell.mat<-matrix(t(shell.temp.df[, c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "temporal.relation")]), nrow=1)
+		puppet.mat<-matrix(t(puppet.temp.df[, c("Contributor", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "temporal.relation")]), nrow=1)
 		
-		shell.col.names<-data.frame(aa=paste("contributor", 1:(ncol(shell.mat)/6), sep=""), 
-                                ab=paste("regagent", 1:(ncol(shell.mat)/6), sep=""),
-																bb=paste("amount", 1:(ncol(shell.mat)/6), sep=""), 
-																cc=paste("date", 1:(ncol(shell.mat)/6), sep=""),
-																dd=paste("committee", 1:(ncol(shell.mat)/6), sep=""), 
-																ee=paste("space", 1:(ncol(shell.mat)/6), sep=""),
+		puppet.col.names<-data.frame(aa=paste("contributor", 1:(ncol(puppet.mat)/6), sep=""), 
+                                ab=paste("regagent", 1:(ncol(puppet.mat)/6), sep=""),
+																bb=paste("amount", 1:(ncol(puppet.mat)/6), sep=""), 
+																cc=paste("date", 1:(ncol(puppet.mat)/6), sep=""),
+																dd=paste("committee", 1:(ncol(puppet.mat)/6), sep=""), 
+																ee=paste("space", 1:(ncol(puppet.mat)/6), sep=""),
 																stringsAsFactors=FALSE)
 		
-		shell.mat.df<-as.data.frame(shell.mat, stringsAsFactors=FALSE)
+		puppet.mat.df<-as.data.frame(puppet.mat, stringsAsFactors=FALSE)
 		
-		names(shell.mat.df)<-c(t(shell.col.names))
+		names(puppet.mat.df)<-c(t(puppet.col.names))
 		
-		shell.mat.df<-cbind(
-			data.frame(address=shell.contribs.df$address.clean[shell.contribs.df$shell.address.id==i][1],
-								 lat=shell.contribs.df$latitude.consolidated[shell.contribs.df$shell.address.id==i][1],
-								 long=shell.contribs.df$longitude.consolidated[shell.contribs.df$shell.address.id==i][1],
-								 TotalAmount=sum(shell.contribs.df$Amount[shell.contribs.df$shell.address.id==i], na.rm=TRUE),
-								 SSL=shell.contribs.df$DC.geocoder.SSL[shell.contribs.df$shell.address.id==i][1],
-								 MARid=shell.contribs.df$DC.geocoder.ADDRESS_ID[shell.contribs.df$shell.address.id==i][1],
+		puppet.mat.df<-cbind(
+			data.frame(address=puppet.contribs.df$address.clean[puppet.contribs.df$puppet.address.id==i][1],
+								 lat=puppet.contribs.df$latitude.consolidated[puppet.contribs.df$puppet.address.id==i][1],
+								 long=puppet.contribs.df$longitude.consolidated[puppet.contribs.df$puppet.address.id==i][1],
+								 TotalAmount=sum(puppet.contribs.df$Amount[puppet.contribs.df$puppet.address.id==i], na.rm=TRUE),
+								 SSL=puppet.contribs.df$DC.geocoder.SSL[puppet.contribs.df$puppet.address.id==i][1],
+								 MARid=puppet.contribs.df$DC.geocoder.ADDRESS_ID[puppet.contribs.df$puppet.address.id==i][1],
 								 stringsAsFactors=FALSE),
-			shell.mat.df)
+			puppet.mat.df)
 		
-		shell.ls[[i]]<-shell.mat.df
+		puppet.ls[[i]]<-puppet.mat.df
 		
 	}
 	
-	library(reshape)
-	shell.dbf<-do.call(rbind.fill, shell.ls)
+
+	puppet.dbf<-do.call(rbind.fill, puppet.ls)
 	# will want to order by committee
 	
 	
-	shell.dbf<-shell.dbf[order(shell.dbf$TotalAmount, decreasing=TRUE), ]
+	puppet.dbf<-puppet.dbf[order(puppet.dbf$TotalAmount, decreasing=TRUE), ]
 	
-	shell.dbf$rankCat<-5
+	puppet.dbf$rankCat<-5
 	
-	if (nrow(shell.dbf)>=10) {
-		shell.dbf$rankCat[1:10]<-1
+	if (nrow(puppet.dbf)>=10) {
+		puppet.dbf$rankCat[1:10]<-1
 	}
 	
-	if (nrow(shell.dbf)>=20) {
-		shell.dbf$rankCat[11:20]<-2
+	if (nrow(puppet.dbf)>=20) {
+		puppet.dbf$rankCat[11:20]<-2
 	}
 	
-	if (nrow(shell.dbf)>=60) {
-		shell.dbf$rankCat[21:60]<-3
+	if (nrow(puppet.dbf)>=60) {
+		puppet.dbf$rankCat[21:60]<-3
 	}
 	
-	if (nrow(shell.dbf)>=140) {
-		shell.dbf$rankCat[61:140]<-4
+	if (nrow(puppet.dbf)>=140) {
+		puppet.dbf$rankCat[61:140]<-4
 	}
 	
-	shell.dbf<-cbind(data.frame(Id=1:nrow(shell.dbf)), shell.dbf)
+	puppet.dbf<-cbind(data.frame(Id=1:nrow(puppet.dbf)), puppet.dbf)
 	
-	library(geosphere)
-	library(shapefiles)
-	
-	shell.shp.df<-data.frame(
-		Id=shell.dbf$Id,
-		X=as.numeric(shell.dbf$long),
-		Y=as.numeric(shell.dbf$lat)
+	puppet.shp.df<-data.frame(
+		Id=puppet.dbf$Id,
+		X=as.numeric(puppet.dbf$long),
+		Y=as.numeric(puppet.dbf$lat)
 		)
 	
-	shell.output.shp <- convert.to.shapefile(shell.shp.df, shell.dbf, "Id", 1)
+	puppet.output.shp <- convert.to.shapefile(puppet.shp.df, puppet.dbf, "Id", 1)
 	
-	write.shapefile(shell.output.shp, paste(work.dir, "shell points time criteria ", target.races, sep=""), arcgis=T)
+	write.shapefile(puppet.output.shp, paste(work.dir, "puppet points time criteria ", target.races, sep=""), arcgis=T)
 	
-	write.csv(shell.dbf, file=paste(work.dir, "shell points time criteria ", target.races, ".csv", sep=""), row.names=FALSE)
+#	write.csv(puppet.dbf, file=paste(work.dir, "puppet points time criteria ", target.races, ".csv", sep=""), row.names=FALSE)
+	
+	write.table(puppet.dbf, file=paste(work.dir, "puppet points time criteria ", target.races, ".tab", sep=""), row.names=FALSE, sep="\t", na="", quote=FALSE)
+
+	
 	
 }
 
 
-# View(shell.grouping.df[, c("address.clean", "Committee.Name","bundling.instance")])
+# View(puppet.grouping.df[, c("address.clean", "Committee.Name","bundling.instance")])
 
 
 ### This point is where it is saved
-# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after shell ID.Rdata", sep=""))
-# save(committees.df, file=paste(work.dir, "committees finished df may 1 after shell ID.Rdata", sep=""))
-# save.image(file=paste(work.dir, "full workspace image after shell ID.Rdata", sep=""))
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after puppet ID.Rdata", sep=""))
+# save(committees.df, file=paste(work.dir, "committees finished df may 1 after puppet ID.Rdata", sep=""))
+# save.image(file=paste(work.dir, "full workspace image after puppet ID.Rdata", sep=""))
 
-# write.csv(contribs.df[contribs.df$contrib.timing.shell.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "shell points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )
+# write.csv(contribs.df[contribs.df$contrib.timing.puppet.flag, c("contribution.id", "Contributor", "Committee.Name", "Amount", "address.clean", "city.clean", "state.clean", "longitude.consolidated", "latitude.consolidated")], file=paste(work.dir, "puppet points time criteria flat file 4-21-12.csv", sep=""),  row.names=FALSE )
 
 
 
-# sudo port install php5-curl
+
 
 
 # http://ocf.dc.gov/intop/opinions/op_96_12.shtm
