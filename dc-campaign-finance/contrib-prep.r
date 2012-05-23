@@ -679,7 +679,16 @@ contribs.df$contributor.spouse.2<-gsub("(^ +)|( +$)", "", contribs.df$contributo
 
 
 
+system(paste("cd \"", code.dir, "\"\n", "perl scrape-committees.pl",  sep=""))
 
+file.copy(
+	from=paste(code.dir,"committees.tsv", sep=""), 
+  to=paste(work.dir,"DC candidate committees.tsv", sep=""),
+	overwrite=TRUE
+)
+
+unlink(paste(code.dir,"committees.tsv", sep=""))
+unlink(paste(code.dir,"lwp_cookies.txt", sep=""))
 
 
 
@@ -687,6 +696,40 @@ committees.df<-read.delim(paste(work.dir,"DC candidate committees.tsv", sep=""),
 
 colnames(committees.df)[colnames(committees.df)=="committee"]<-"Committee.Name"
 colnames(committees.df)[colnames(committees.df)=="office"]<-"electoral.office"
+
+committees.df$Committee.Name<-gsub("(^ +)|( +$)", "", committees.df$Committee.Name)
+
+
+contribs.df$Committee.Name<-gsub("(^ +)|( +$)", "", contribs.df$Committee.Name)
+
+contribs.df$Committee.Name[contribs.df$Committee.Name=="Re-Elect Jim Graham  (2006)"]<-
+	"Re-Elect Jim Graham (2006)"
+committees.df$Committee.Name[committees.df$Committee.Name=="Committee to Elect Edward Donnie James"]<-
+	"Committee to Elect Edward \"Donnie\" James"
+
+committees.df$Committee.Name[committees.df$Committee.Name=="SS for Ward 8 City Council"]<-
+	"\"SS\" for Ward 8 City Council"
+
+committees.df$Committee.Name[committees.df$Committee.Name=="A Lot of People Supporting Erik Gaull for Ward 3 C"]<-
+	"A Lot of People Supporting Erik Gaull for Ward 3 Council"
+
+contribs.df$Committee.Name[contribs.df$Committee.Name=="A Lot of People Supporting Erik Gaull for Ward 3 C"]<-
+	"A Lot of People Supporting Erik Gaull for Ward 3 Council"
+
+committees.df$Committee.Name[committees.df$Committee.Name=="Committee to Re-elect Tom Wells for School Board-D"]<-
+	"Committee to Re-elect Tom Wells for School Board-Dist 3"
+
+contribs.df$Committee.Name[contribs.df$Committee.Name=="Committee to Re-elect Tom Wells for School Board-D"]<-
+	"Committee to Re-elect Tom Wells for School Board-Dist 3"
+
+contribs.df$Committee.Name[contribs.df$Committee.Name=="Committee to Re-elect Tony Williams"]<-
+	"Committee to Re-Elect Tony Williams"
+
+contribs.df$Committee.Name[contribs.df$Committee.Name=="Committee to Elect  Renee Bowser to Council Ward 4"]<-
+	"Committee to Elect Renee Bowser to Council Ward 4"
+
+
+
 
 
 committees.df[committees.df$Committee.Name=="Committee to Elect Cardell Shelton", ]
@@ -698,8 +741,6 @@ committees.same.name.df<-committees.same.name.df[!duplicated(committees.same.nam
 
 #contribs.save.df<-contribs.df
 
-contribs.df$Committee.Name[contribs.df$Committee.Name=="Re-Elect Jim Graham  (2006)"]<-
-  "Re-Elect Jim Graham (2006)"
 
 
 for ( i in 1:nrow(committees.same.name.df)) {
@@ -927,7 +968,7 @@ for (target.ssl in unique(cama.dups.df$SSL)) {
 	
 	cama.dups.ls[[target.ssl]]<-cama.dups.temp.df[1, ]
 	
-	cat(target.ssl, "\n")
+#	cat(target.ssl, "\n")
 	
 } 
 
@@ -948,7 +989,6 @@ rm(cama.df)
 
 contribs.df$DC.property.multiunit.building<-contribs.df$DC.property.NUM_UNITS>1 &
   !is.na(contribs.df$DC.property.NUM_UNITS)
-
 
 
 ### This point is where it is saved

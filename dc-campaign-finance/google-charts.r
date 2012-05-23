@@ -1,3 +1,7 @@
+# in- and out-geography
+# Total amount from source
+# By year how much (by source?)
+# How proportion from puppet corps has changed over time
 
 
 
