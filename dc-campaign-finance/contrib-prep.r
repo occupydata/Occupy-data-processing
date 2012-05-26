@@ -518,10 +518,15 @@ simple.cap<-Vectorize(simple.cap, USE.NAMES=FALSE)
 contribs.df$address.clean<-simple.cap(tolower(contribs.df$address.clean))
 contribs.df$city.clean<-simple.cap(tolower(contribs.df$city.clean))
 
-contribs.df$address.clean<-gsub("( Nw )|( Nw$)", "NW", contribs.df$address.clean)
-contribs.df$address.clean<-gsub("( Ne )|( Ne$)", "NE", contribs.df$address.clean)
-contribs.df$address.clean<-gsub("( Sw )|( Sw$)", "SW", contribs.df$address.clean)
-contribs.df$address.clean<-gsub("( Se )|( Se$)", "SE", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Nw$", " NW", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Ne$", " NE", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Sw$", " SW", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Se$", " SE", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Nw ", " NW ", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Ne ", " NE ", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Sw ", " SW ", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Se ", " SE ", contribs.df$address.clean)
+contribs.df$address.clean<-gsub(" Po B", " PO B", contribs.df$address.clean)
 
 contribs.df$address.no.unit.clean<-gsub(" No[.] [0-9]+[A-Za-z]?$", "", contribs.df$address.clean)
 
@@ -1000,7 +1005,7 @@ puppet.id.run<-1
 source(paste(code.dir, "shell-corp-identification.r", sep=""))
 
 source(paste(code.dir, "corp-data-gathering.r", sep=""))
-
+# save(contribs.df, file=paste(work.dir, "Geocoded contribs df may 1 after DCRA data gathering.Rdata", sep=""))
 
 puppet.grouping.df<-contribs.df[contribs.df$contrib.timing.puppet.flag, ]
 
@@ -1026,38 +1031,111 @@ contribs.df<-merge(contribs.df, puppet.grouping.df[, c("contribution.id", "bundl
 
 reg.agent.test.df<-contribs.df[contribs.df$contrib.timing.puppet.flag & 
 	(contribs.df$DC.property.multiunit.building | contribs.df$address.evidence.multiunit.building) &
-	contribs.df$address.no.unit.clean == contribs.df$address.clean, ]
+	contribs.df$address.no.unit.clean == contribs.df$address.clean, c("DCRA.reg.agent.name", "bundling.instance", "contribution.id")]
 
-reg.agent.test.big.df<-contribs.df[!is.na(contribs.df$bundling.instance), ]
+reg.agent.test.big.df<-contribs.df[!is.na(contribs.df$bundling.instance), c("DCRA.reg.agent.name", "bundling.instance", "contribution.id")]
 
 contribs.df$reg.agent.puppet.flag<-TRUE
 
+set.reg.agent.to.false<-c()
+
 for ( i in 1:nrow(reg.agent.test.df)) {
 	
-	contribs.df$reg.agent.puppet.flag[
-		which(contribs.df$contribution.id==reg.agent.test.df$contribution.id[i])]<-
+#	contribs.df$reg.agent.puppet.flag[
+#		which(contribs.df$contribution.id==reg.agent.test.df$contribution.id[i])]<-
+	temp.v<-
 			!is.na(reg.agent.test.df$DCRA.reg.agent.name[i]) & 
 			reg.agent.test.df$DCRA.reg.agent.name[i] %in% 
 			reg.agent.test.big.df$DCRA.reg.agent.name[ 
 			  reg.agent.test.big.df$bundling.instance==reg.agent.test.df$bundling.instance[i] &
 			    reg.agent.test.big.df$contribution.id!=reg.agent.test.df$contribution.id[i]
 				]
-	cat(i, "\n")
+
+  if(!temp.v) {
+    set.reg.agent.to.false<-c(
+    	set.reg.agent.to.false, reg.agent.test.df$contribution.id[i])
+  }
+
 }
+
+
+contribs.df$reg.agent.puppet.flag[
+  contribs.df$contribution.id %in% set.reg.agent.to.false]<-FALSE
+
+contribs.df$bundling.instance[
+	contribs.df$contribution.id %in% set.reg.agent.to.false]<-NA
+
+contribs.df$contrib.timing.puppet.flag[contribs.df$address.clean %in% c("", " ADDRESS", " N A", " REQUESTED", "Requested", "X", "N A", "Address")]<-FALSE
+
+contribs.df$reg.agent.puppet.flag[contribs.df$address.clean %in% c("", " ADDRESS", " N A", " REQUESTED", "Requested", "X", "N A", "Address")]<-FALSE
+
+contribs.df$bundling.instance[contribs.df$address.clean %in% c("", " ADDRESS", " N A", " REQUESTED", "Requested", "X", "N A", "Address")]<-NA	 
+
 
 more.than.one.shell.corp<-unique(contribs.df$bundling.instance[
   duplicated(contribs.df$bundling.instance) & contribs.df$reg.agent.puppet.flag])
 
 contribs.df$reg.agent.puppet.flag[!(contribs.df$bundling.instance %in% more.than.one.shell.corp) &
-	contribs.df$reg.agent.puppet.flag]<-FALSE
+	contribs.df$reg.agent.puppet.flag & contribs.df$contrib.timing.puppet.flag]<-FALSE
 
+contribs.df$contrib.timing.puppet.flag[!(contribs.df$bundling.instance %in% more.than.one.shell.corp) &
+	contribs.df$reg.agent.puppet.flag & contribs.df$contrib.timing.puppet.flag]<-FALSE
+
+contribs.df$bundling.instance[!(contribs.df$bundling.instance %in% more.than.one.shell.corp) &
+	contribs.df$reg.agent.puppet.flag & contribs.df$contrib.timing.puppet.flag]<-NA
+
+contribs.df$bundling.instance<-as.numeric(as.factor(contribs.df$bundling.instance))
 
 contribs.df$final.puppet.flag <- contribs.df$contrib.timing.puppet.flag &
   contribs.df$reg.agent.puppet.flag
 
-puppet.id.run<-2
+#puppet.id.run<-2
 
-source(paste(code.dir, "shell-corp-identification.r", sep=""))
+#source(paste(code.dir, "shell-corp-identification.r", sep=""))
 
+
+
+
+
+save(contribs.df, file=paste(work.dir, "DC_campaign_contributions_all_columns.Rdata", sep=""))
+
+write.csv(contribs.df, file=paste(work.dir, "DC_campaign_contributions_all_columns.csv", sep=""), row.names=FALSE, na="")
+
+wd.saved<-getwd()
+setwd(work.dir)
+zip(zipfile="DC_campaign_contributions_all_columns.zip", files= "DC_campaign_contributions_all_columns.csv")
+setwd(wd.saved)
+
+
+journalist.cut.columns<-c(	"contribution.id","contributor.clean","Committee.Name","Amount","Date.of.Receipt","address.clean","city.clean","state.clean","zip.clean","contribution.type.clean","contributor.first.name","contributor.last.name","contributor.spouse.1","contributor.spouse.2","candidate","electoral.office","election.cycle","Address","city","state","Zip","Contributor","Contribution.Type","address.no.unit.clean","address.evidence.multiunit.building","latitude.consolidated","longitude.consolidated","candidate.party","candidate.committee.organization.date","contributor.ward","recipient.ward","contributor.recipient.same.geo","DC.property.NUM_UNITS","DC.property.multiunit.building","same.address.puppet.flag","max.contrib.puppet.flag","contrib.timing.puppet.flag","DCRA.business.full.name","DCRA.file.num","DCRA.entity.id","DCRA.reg.agent.name","bundling.instance","reg.agent.puppet.flag","final.puppet.flag","max.legal.contrib","DC.geocoder.SSL","geocode.id")
+
+write.csv(contribs.df[, journalist.cut.columns], 
+					file=paste(work.dir, "DC_campaign_contributions_journalist_cut.csv", sep=""), row.names=FALSE, na="")
+
+wd.saved<-getwd()
+setwd(work.dir)
+zip(zipfile="DC_campaign_contributions_journalist_cut.zip", files= "DC_campaign_contributions_journalist_cut.csv")
+setwd(wd.saved)
+
+
+# write.csv(file=paste(work.dir, "search form.csv", sep=""), row.names=FALSE, na="")
+
+zip -r /path/to/out.zip ./folder/
+
+
+
+puppets.to.output.df<-contribs.df[contribs.df$final.puppet.flag, ]
+
+puppets.to.output.df<-puppets.to.output.df[order(
+	puppets.to.output.df$address.clean,
+	puppets.to.output.df$Committee.Name, 
+	puppets.to.output.df$Date.of.Receipt), ]
+
+write.csv(puppets.to.output.df[, c("contributor.clean", "address.clean", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "latitude.consolidated", "longitude.consolidated")], file=paste(work.dir, "DC_campaign_contributions_puppet_corps_for_json.csv", sep=""), row.names=FALSE, na="")
+
+committees.to.output.df<-contribs.df[contribs.df$final.puppet.flag, c("Committee.Name", "recipient.ward", "election.cycle")]
+committees.to.output.df<-committees.to.output.df[!duplicated(committees.to.output.df$Committee.Name), ]
+
+write.csv(committees.to.output.df, file=paste(work.dir, "DC_campaign_contributions_committees_for_json.csv", sep=""), row.names=FALSE, na="")
 
 

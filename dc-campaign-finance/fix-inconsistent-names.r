@@ -44,8 +44,12 @@ fix.inconsistent.contrib.names<-function(inconsistent.recs, grouping.threshold=0
       identity = inconsistent.recs$contribution.id, strcmp = TRUE),
 			  error = function(e) { "No results" })
 	} else {
-		inconsistent.recs$name.parts.must.match<-sapply(str_extract_all(inconsistent.recs$contributor.clean,
-		  "( [a-zA-Z] )|([0-9]+)"), FUN=paste, sep="")
+		inconsistent.recs$name.parts.must.match<-sapply(
+			str_extract_all(inconsistent.recs$contributor.clean,
+		  "( [a-zA-Z] )|([0-9]+)"), FUN=paste, sep="", collapse="")
+		
+		inconsistent.recs$name.parts.must.match[
+		  inconsistent.recs$name.parts.must.match==""]<-"<PLACEHOLDER FOR BLANKS>"
 		
 		rpairs<-tryCatch(rpairs <- compare.dedup(inconsistent.recs[, c("address.clean", "contributor.clean", "name.parts.must.match")],
 		  blockfld = list(c("address.clean", "name.parts.must.match")),
@@ -77,12 +81,10 @@ fix.inconsistent.contrib.names<-function(inconsistent.recs, grouping.threshold=0
 	
 	m<-as.matrix(apply(df.temp[, c("id1", "id2")], MARGIN=2, FUN=as.character))
 	if (ncol(m)==1) {m<-t(m)}
-	dimnames(m)<-NULL
-	
+	dimnames(m)<-NULL	
 	g<-graph.edgelist(m)
-	test<-clusters(g)
-	
-	g.df<-data.frame(indices=V(g)$name, membership=test$membership,
+	clust.g<-clusters(g)
+	g.df<-data.frame(indices=V(g)$name, membership=clust.g$membership,
     contributor=rpairs.classified$data$contributor.clean[as.numeric(V(g)$name)],
 	  stringsAsFactors=FALSE)
 	
@@ -115,7 +117,7 @@ fix.inconsistent.contrib.names<-function(inconsistent.recs, grouping.threshold=0
 		
 	}
 	
-	name.replacements.df<-merge(name.replacements.df, data.frame(component=test$membership,
+	name.replacements.df<-merge(name.replacements.df, data.frame(component=clust.g$membership,
     contribution.id=inconsistent.recs$contribution.id[as.numeric(V(g)$name)],
 		  stringsAsFactors=FALSE))
 	

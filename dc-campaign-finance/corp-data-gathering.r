@@ -210,9 +210,6 @@ for (target.contrib in suspected.bundled.contrib.ids) {
 
 target.corp<-contribs.df$contributor.clean[contribs.df$contribution.id==target.contrib]
 
-#target.contrib<-100
-
-#target.corp<-"Big Bear, LLC"
 
 target.corp.query<-gsub(",", " ",  target.corp)
 target.corp.query<-gsub("[[:punct:]]", "",  target.corp)
@@ -230,9 +227,21 @@ cat(target.corp.query, file=paste(code.dir, "dcraQuery.txt", sep=""))
 
 system(paste("cd ", "\"", code.dir, "\"", "\n", "php ", "\"", code.dir, "dcra-scrape.php\"", sep=""), ignore.stdout = TRUE, ignore.stderr = TRUE)
 
-
 scrape.output.v<-tryCatch(scrape.output.v<-readLines(paste(code.dir, "dcra_temp_data.txt", sep="")),
 				 error = function(e) { "No results" })
+
+if (all(scrape.output.v=="No results") & grepl("^[Tt][Hh][Ee] ", target.corp.query) ) {
+	
+	target.corp.query<-gsub("^[Tt][Hh][Ee] ", "", target.corp.query)
+	
+	cat(target.corp.query, file=paste(code.dir, "dcraQuery.txt", sep=""))
+	
+	system(paste("cd ", "\"", code.dir, "\"", "\n", "php ", "\"", code.dir, "dcra-scrape.php\"", sep=""), ignore.stdout = TRUE, ignore.stderr = TRUE)
+	
+	scrape.output.v<-tryCatch(scrape.output.v<-readLines(paste(code.dir, "dcra_temp_data.txt", sep="")),
+														error = function(e) { "No results" })
+	
+}
 
 if (all(scrape.output.v=="No results") ) {
 
@@ -275,9 +284,9 @@ for ( i in 1:nrow(scrape.output.df)) {
   } else {
   	scrape.output.df$death.date<-scrape.output.df$entity.status.date[i]
   }
-  
-}
 
+}
+  
 scrape.output.df$likely.match<-
   scrape.output.df$birth.date <= contribs.df$Date.of.Receipt[contribs.df$contribution.id==target.contrib] &
   scrape.output.df$death.date >= contribs.df$Date.of.Receipt[contribs.df$contribution.id==target.contrib]
@@ -285,15 +294,16 @@ scrape.output.df$likely.match<-
 scrape.output.df$likely.match[is.na(scrape.output.df$likely.match)]<-TRUE
 
 
-
 scrape.output.df$match.score<-jarowinkler(target.corp.query, scrape.output.df$business.name)
+
+scrape.output.df$match.score[scrape.output.df$match.score==0]<-jarowinkler(target.corp.query, gsub( "( PC$)|( INC$)|( LLC$)|( INCORPORATED$)|( PLLC$)|( LLP$)|( LTD$)|( LLLP$)|( LIMITED PARTNERSHIP$)|( PARTNERSHIP$)|( LP$)|( GP$)|([[:punct:]])", "", scrape.output.df$business.full.name[scrape.output.df$match.score==0]))
 
 if (all(scrape.output.df$match.score[scrape.output.df$likely.match]<0.85) |
   all(!scrape.output.df$likely.match)) {next}
 
 scrape.output.df$chosen.match<-FALSE
 
-scrape.output.df$chosen.match[
+scrape.output.df$chosen.match[scrape.output.df$likely.match][
   which.max(scrape.output.df$match.score[scrape.output.df$likely.match])]<-TRUE
   
 
