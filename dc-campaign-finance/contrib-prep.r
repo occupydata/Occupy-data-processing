@@ -1120,7 +1120,16 @@ setwd(wd.saved)
 
 # write.csv(file=paste(work.dir, "search form.csv", sep=""), row.names=FALSE, na="")
 
-zip -r /path/to/out.zip ./folder/
+
+write.csv(contribs.df[, c("candidate", "election.cycle", "contributor.clean", "address.clean", "city.clean", "state.clean", "Amount", "Date.of.Receipt")], file=paste(work.dir, "DC_campaign_contributions_online_search_form.csv", sep=""), row.names=FALSE, na="")
+
+wd.saved<-getwd()
+setwd(work.dir)
+zip(zipfile="DC_campaign_contributions_online_search_form.zip", files= "DC_campaign_contributions_online_search_form.csv")
+setwd(wd.saved)
+
+
+
 
 
 
@@ -1131,11 +1140,35 @@ puppets.to.output.df<-puppets.to.output.df[order(
 	puppets.to.output.df$Committee.Name, 
 	puppets.to.output.df$Date.of.Receipt), ]
 
-write.csv(puppets.to.output.df[, c("contributor.clean", "address.clean", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "latitude.consolidated", "longitude.consolidated")], file=paste(work.dir, "DC_campaign_contributions_puppet_corps_for_json.csv", sep=""), row.names=FALSE, na="")
+write.csv(puppets.to.output.df[, c("contributor.clean", "address.clean", "DCRA.reg.agent.name", "Amount", "Date.of.Receipt", "Committee.Name", "recipient.ward", "election.cycle", "latitude.consolidated", "longitude.consolidated")], file=paste(work.dir, "DC_campaign_contributions_puppet_corps_for_json.csv", sep=""), row.names=FALSE, na="")
 
-committees.to.output.df<-contribs.df[contribs.df$final.puppet.flag, c("Committee.Name", "recipient.ward", "election.cycle")]
-committees.to.output.df<-committees.to.output.df[!duplicated(committees.to.output.df$Committee.Name), ]
 
-write.csv(committees.to.output.df, file=paste(work.dir, "DC_campaign_contributions_committees_for_json.csv", sep=""), row.names=FALSE, na="")
+write.table(puppets.to.output.df[, c("candidate", "election.cycle", "contributor.clean", "DCRA.reg.agent.name", "address.clean", "city.clean", "state.clean", "Amount", "Date.of.Receipt")], file=paste(work.dir, "DC_campaign_contributions_puppets_for_webpage_search.csv", sep=""), col.names=c("Candidate", "Election Year", "Contributor", "Registered Agent", "Address", "City", "State", "Amount", "Date"),  row.names=FALSE, qmethod = "double", sep=",")
 
+puppets.to.output.df$manyeyes.address<-paste("Addr: ", puppets.to.output.df$address.clean, ", ", puppets.to.output.df$city.clean, ", ", puppets.to.output.df$state.clean, sep="")
+
+puppets.to.output.df$manyeyes.corp<-paste("Corp: ", puppets.to.output.df$contributor.clean, sep="")
+
+puppets.to.output.df$manyeyes.amount<-paste("Amount: $", puppets.to.output.df$Amount, sep="")
+
+for (target.year in sort(unique(puppets.to.output.df$election.cycle))) {
+	
+	write.table(puppets.to.output.df[puppets.to.output.df$election.cycle==target.year, c("Committee.Name", "manyeyes.address", "manyeyes.corp", "manyeyes.amount")], 
+    file=paste(work.dir, "Many Eyes Visualization ", target.year, ".csv", sep=""), 
+    col.names=c("Committee", "Address", "Contributor", "Amount"),
+    row.names=FALSE, qmethod = "double", sep=",")
+	
+}
+
+
+
+
+webpage.df<-contribs.df[!is.na(contribs.df$candidate) & !is.na(contribs.df$election.cycle), c("candidate", "election.cycle", "contributor.clean", "address.clean", "city.clean", "state.clean", "Amount", "Date.of.Receipt")]
+
+write.table(webpage.df[order(webpage.df$Date.of.Receipt, webpage.df$Amount, decreasing=TRUE),], file=paste(work.dir, "DC_campaign_contributions_for_webpage_search.csv", sep=""), col.names=c("Candidate", "Election Year", "Contributor", "Address", "City", "State", "Amount", "Date"),  row.names=FALSE, qmethod = "double", sep=",")
+
+wd.saved<-getwd()
+setwd(work.dir)
+zip(zipfile="DC_campaign_contributions_for_webpage_search.zip", files= "DC_campaign_contributions_for_webpage_search.csv")
+setwd(wd.saved)
 
