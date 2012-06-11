@@ -877,14 +877,14 @@ contribs.df$contributor.ward[is.na(contribs.df$contributor.ward)]<-"Non-DC"
 
 contribs.df$recipient.ward<-NA
 
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*1", committees.df$electoral.office)] <-"1"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*2", committees.df$electoral.office)] <-"2"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*3", committees.df$electoral.office)] <-"3"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*4", committees.df$electoral.office)] <-"4"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*5", committees.df$electoral.office)] <-"5"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*6", committees.df$electoral.office)] <-"6"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*7", committees.df$electoral.office)] <-"7"
-contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*8", committees.df$electoral.office)] <-"8"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*1", contribs.df$electoral.office)] <-"1"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*2", contribs.df$electoral.office)] <-"2"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*3", contribs.df$electoral.office)] <-"3"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*4", contribs.df$electoral.office)] <-"4"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*5", contribs.df$electoral.office)] <-"5"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*6", contribs.df$electoral.office)] <-"6"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*7", contribs.df$electoral.office)] <-"7"
+contribs.df$recipient.ward[grepl("[Ww]ard[[:space:]]*8", contribs.df$electoral.office)] <-"8"
 
 contribs.df$recipient.ward[is.na(contribs.df$recipient.ward)]<-"Citywide"
 
